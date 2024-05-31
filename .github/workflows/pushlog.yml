@@ -1,4 +1,4 @@
-name: Publish Docker image and Create Branch with Commit Hash
+name: commitlog
 on:
  push:
    branches: ['main']
