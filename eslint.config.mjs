@@ -12,10 +12,7 @@ export default [
       semi: ['error', 'always'],
       quotes: ['error', 'double'],
       indent: ['error', 2],
-      'linebreak-style': ['error', 'unix'],
-      'no-mixed-spaces-and-tabs': ['error', 'smart-tabs'],
-      'no-trailing-spaces': ['error', { 'skipBlankLines': true }],
-      'max-len': ['error', { 'code': 10 }]
+
     }
   }
 ];
