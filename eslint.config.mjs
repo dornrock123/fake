@@ -12,7 +12,7 @@ export default [
       semi: ['error', 'always'],
       quotes: ['error', 'double'],
       indent: ['error', 2],
-
+      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     }
   }
 ];
