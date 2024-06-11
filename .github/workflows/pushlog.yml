@@ -97,7 +97,7 @@ jobs:
     - name: Send email
       uses: dornrock123/action-send-mail@v3
       with:
-        server_address: krisd3214@gmail.com
+        server_address: stmp.gmail.com
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
