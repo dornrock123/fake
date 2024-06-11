@@ -95,7 +95,7 @@ jobs:
         echo "COMMIT_AUTHOR_EMAIL=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_ENV
     
     - name: Send email
-      uses: fake/action-send-mail@v3
+      uses: dornrock123/action-send-mail@v3
       with:
         server_address: krisd3214@gmail.com
         server_port: 587
