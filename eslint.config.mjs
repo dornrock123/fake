@@ -13,7 +13,8 @@ export default [
       quotes: ['error', 'double'],
       indent: ['error', 2],
       'linebreak-style': ['error', 'unix'],
-      'no-mixed-spaces-and-tabs': ['error', 'smart-tabs']
+      'no-mixed-spaces-and-tabs': ['error', 'smart-tabs'],
+      'no-trailing-spaces': ['error', { 'skipBlankLines': true }]
     }
   }
 ];
