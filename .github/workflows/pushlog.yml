@@ -94,22 +94,22 @@ jobs:
     
     - name: Show Commit Author Email
       run: echo "Commit Author Email ${{ env.COMMIT_AUTHOR_EMAIL }}"
-
+      
   send_notification:
-  name: Send Notification
-  runs-on: ubuntu-latest
-  needs: [lint, build, push_to_registry]
-  if: failure()
-  steps:
-  - name: Send email
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 587
-      username: ${{ secrets.GMAIL_USERNAME }}
-      password: ${{ secrets.GMAIL_APP_PASSWORD }}
-      subject: GitHub Action Failure Notification
-      body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
-      to: ${{ github.event.head_commit.author.email }}
-      from: ${{ secrets.GMAIL_USERNAME }}
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [lint, build, push_to_registry]
+    if: failure()
+    steps:
+    - name: Send email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.GMAIL_USERNAME }}
+        password: ${{ secrets.GMAIL_APP_PASSWORD }}
+        subject: GitHub Action Failure Notification
+        body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
+        to: ${{ github.event.head_commit.author.email }}
+        from: ${{ secrets.GMAIL_USERNAME }}
 
