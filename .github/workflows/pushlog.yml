@@ -92,8 +92,8 @@ jobs:
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
         echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" 
     
-    # - name: Show Commit Author Email
-      # run: echo "Commit Author Email:${{ env.COMMIT_AUTHOR_EMAIL }}"
+    - name: Show Commit Author Email
+      run: echo "Commit Author Email:${{ env.COMMIT_AUTHOR_EMAIL }}"
 
   send_notification:
     name: Send Notification
@@ -110,5 +110,5 @@ jobs:
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
         subject: GitHub Action Failure Notification
         body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
-        to: ${{AUTHOR_EMAIL}}
+        to: ${{ env.COMMIT_AUTHOR_EMAIL }}
         from: ${{ secrets.GMAIL_USERNAME }}
