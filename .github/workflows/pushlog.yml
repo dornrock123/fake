@@ -99,7 +99,6 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: failure()
     steps:
     - name: Send email
       uses: dawidd6/action-send-mail@v3
@@ -108,7 +107,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.GMAIL_USERNAME }}
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
-        subject: GitHub Action Failure Notification
-        body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
+        subject: GitHub Action Notification
+        body: 'The recent commit has been processed. Please check the details on GitHub.'
         to: ${{ env.COMMIT_AUTHOR_EMAIL }}
         from: ${{ secrets.GMAIL_USERNAME }}
