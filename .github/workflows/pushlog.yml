@@ -79,18 +79,21 @@ jobs:
         git checkout -b $NEW_BRANCH_NAME
         git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
-  get_commit_author_email:
-    name: Get Commit Author Email
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+get_commit_author_email:
+  name: Get Commit Author Email
+  runs-on: ubuntu-latest
+  steps:
+  - name: Checkout Code
+    uses: actions/checkout@v3
 
-    - name: Get Commit Info
-      id: commit_info
-      run: |
-        AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-        echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" >> $GITHUB_ENV
+  - name: Get Commit Info
+    id: commit_info
+    run: |
+      AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+      echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" >> $GITHUB_ENV
+
+  - name: Show Commit Author Email
+    run: echo "Commit Author Email ${{ env.COMMIT_AUTHOR_EMAIL }}"
 
   send_notification:
     name: Send Notification
