@@ -85,6 +85,9 @@ jobs:
     needs: [lint, build]
     if: failure()
     steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
     - name: Get Commit Info
       id: commit_info
       run: |
