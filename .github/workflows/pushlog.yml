@@ -110,5 +110,5 @@ jobs:
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
         subject: GitHub Action Failure Notification
         body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
-        cc: ${{ env.COMMIT_AUTHOR_EMAIL }}
+        to: atichai_l@softsquaregroup.com
         from: ${{ secrets.GMAIL_USERNAME }}
