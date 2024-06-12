@@ -37,7 +37,7 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: build project
+    - name: Build project
       run: npm run build
 
   push_to_registry:
@@ -82,7 +82,8 @@ jobs:
   get_commit_author_email:
     name: Get Commit Author Email
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
+    needs: [lint, build]
+    if: failure()
     steps:
     - name: Get Commit Info
       id: commit_info
@@ -94,7 +95,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: get_commit_author_email
-    if: failure()
+    if: always()
     steps:
     - name: Send email
       uses: dawidd6/action-send-mail@v3
