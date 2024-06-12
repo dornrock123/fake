@@ -104,7 +104,7 @@ jobs:
         server_address: smtp.gmail.com
         server_port: 587
         username: ${{ secrets.GMAIL_USERNAME }}
-        password: ${{ secrets.GMAIL_PASSWORD }}
+        password: ${{ secrets.GMAIL_APP_PASSWORD }}
         subject: GitHub Action Failure Notification
         body: 'The recent commit failed in the lint or build step. Please check the details on GitHub.'
         to: ${{ env.COMMIT_AUTHOR_EMAIL }}
