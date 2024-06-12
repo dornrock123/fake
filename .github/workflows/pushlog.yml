@@ -95,7 +95,7 @@ jobs:
         echo "::set-output name=author_email::${AUTHOR_EMAIL}"
     
     - name: Show Commit Author Email
-      run: echo "Commit Author Email ${{ steps.commit_info.outputs.author_email }}"
+      run: git config user.email "$(git log -n 1 --pretty=format:%ae)"
 
   send_notification:
     name: Send Notification
