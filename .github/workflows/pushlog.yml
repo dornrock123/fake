@@ -93,7 +93,7 @@ jobs:
         echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" 
     
     - name: Show Commit Author Email
-      run: echo "Commit Author Email:=${{ env.COMMIT_AUTHOR_EMAIL }}"
+      run: echo "Commit Author Email:${{ env.COMMIT_AUTHOR_EMAIL }}"
 
   send_notification:
     name: Send Notification
