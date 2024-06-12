@@ -83,19 +83,19 @@ jobs:
     name: Get Commit Author Email
     runs-on: ubuntu-latest
     outputs:
-      commit_author_email: ${{ steps.commit_info.outputs.author_email }}
+      commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
     - name: Get Commit Info
-      id: commit_info
+      id: get_commit_info
       run: |
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-        echo "::set-output name=author_email::${AUTHOR_EMAIL}"
+        echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
     
     - name: Show Commit Author Email
-      run: git config user.email "$(git log -n 1 --pretty=format:%ae)"
+      run: echo "Commit Author Email:${{ steps.get_commit_info.outputs.commit_author_email }}"
 
   send_notification:
     name: Send Notification
@@ -111,5 +111,5 @@ jobs:
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
         subject: GitHub Action Notification
         body: 'The recent commit has been processed. Please check the details on GitHub.'
-        to: ${{ steps.get_commit_author_email.outputs.commit_author_email }}
+        to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
         from: ${{ secrets.GMAIL_USERNAME }}
