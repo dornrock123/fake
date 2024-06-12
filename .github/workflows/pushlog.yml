@@ -113,17 +113,4 @@ jobs:
         to: ${{ github.event.head_commit.author.email }}
         from: ${{ secrets.GMAIL_USERNAME }}
 
-  create_issue:
-    name: Create Issue
-    runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
-    if: failure()
-    steps:
-    - name: Create Issue
-      run: |
-        ISSUE_TITLE="GitHub Action Failure Notification"
-        ISSUE_BODY="The recent commit failed in the lint or build step. Please check the details on GitHub."
-        curl -X POST \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -d "{\"title\":\"${ISSUE_TITLE}\",\"body\":\"${ISSUE_BODY}\"}" \
-          "https://api.github.com/repos/${{ github.repository }}/issues"
+ 
