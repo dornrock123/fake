@@ -90,7 +90,7 @@ jobs:
       id: commit_info
       run: |
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-        echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" >> $GITHUB_ENV
+        echo "COMMIT_AUTHOR_EMAIL=${AUTHOR_EMAIL}" 
     
     - name: Show Commit Author Email
       run: echo "Commit Author Email ${{ env.COMMIT_AUTHOR_EMAIL }}"
