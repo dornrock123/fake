@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
 
+    env:
+      CHECK_CODE_RESULT: ''
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -38,9 +41,19 @@ jobs:
         run: npm install
 
       - name: Build project
+        run: npm run build
+
+      - name: Determine check code result
         run: |
-          npm run build || echo "BUILD_ERROR=true" >> $GITHUB_ENV
-          # ถ้า build ไม่ผ่านจะเพิ่ม BUILD_ERROR=true ลงใน $GITHUB_ENV
+          # Replace this with your actual code testing logic
+          # For example, check if a file exists or a script's exit code
+          if [ -f path/to/some/file ]; then
+            echo "Check code succeeded"
+            echo "::set-env name=CHECK_CODE_RESULT::success"
+          else
+            echo "Check code failed"
+            echo "::set-env name=CHECK_CODE_RESULT::failure"
+          fi
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -101,9 +114,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-
-    if: failure() && env.BUILD_ERROR == 'true'  # ส่งอีเมล์เฉพาะเมื่อเกิดข้อผิดพลาดใน build และมี BUILD_ERROR ถูกตั้งค่าเป็น 'true'
-
+    if: ${{ failure() }}
     steps:
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
@@ -113,15 +124,10 @@ jobs:
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: GitHub Action Failure Notification
-          body: |
-            The build of the GitHub Action workflow has failed. 
-            Details:
-            - Commit message: ${{ github.event.head_commit.message }}
-            - Repository: ${{ github.repository }}
+          body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
       - name: Send email on success
-        if: success()
+        if: ${{ success() }}
         run: echo "All jobs in the GitHub Action workflow have succeeded."
-
