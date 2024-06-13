@@ -127,9 +127,8 @@ jobs:
           body: |
             'One of the jobs in the GitHub Action workflow has failed. 
             Details:
-            - Job name: ${{ github.job }}
-            - Workflow run ID: ${{ github.run_id }}
-            - Error message: ${{ job.status }}
+            - Commit SHA: ${{ github.sha }}
+            - Repository: ${{ github.repository }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
