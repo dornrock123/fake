@@ -37,6 +37,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Get Commit Info
+        id: get_commit_info
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_DATE=$(git log -1 --pretty=%cd)
+          echo "::set-env name=COMMIT_MESSAGE::$COMMIT_MESSAGE"
+          echo "::set-env name=COMMIT_AUTHOR::$COMMIT_AUTHOR"
+          echo "::set-env name=COMMIT_DATE::$COMMIT_DATE"
+
       - name: Build project
         run: |
           npm run build || echo "BUILD_ERROR=true" >> $GITHUB_ENV
