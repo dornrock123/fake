@@ -76,7 +76,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
 
     - name: Create New Branch with Commit Hash
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
@@ -105,18 +105,18 @@ jobs:
     - name: Check Workflow Status
       id: check_status
       run: |
-        LINT_STATUS=${{ job.lint.result }}
-        BUILD_STATUS=${{ job.build.result }}
-        PUSH_STATUS=${{ job.push_to_registry.result }}
+        LINT_STATUS="${{ needs.lint.result }}"
+        BUILD_STATUS="${{ needs.build.result }}"
+        PUSH_STATUS="${{ needs.push_to_registry.result }}"
         
-        if [ "$LINT_STATUS" == "failure" ] || [ "$BUILD_STATUS" == "failure" ] || [ "$PUSH_STATUS" == "failure" ]; then
+        if [[ "$LINT_STATUS" == "failure" ]] || [[ "$BUILD_STATUS" == "failure" ]] || [[ "$PUSH_STATUS" == "failure" ]]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
         fi
 
     - name: Send Failure Notification
-      if: ${{ steps.check_status.outputs.status == 'failure' }}
+      if: steps.check_status.outputs.status == 'failure'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -129,7 +129,7 @@ jobs:
         from: ${{ secrets.GMAIL_USERNAME }}
 
     - name: Send Success Notification
-      if: ${{ steps.check_status.outputs.status == 'success' }}
+      if: steps.check_status.outputs.status == 'success'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
