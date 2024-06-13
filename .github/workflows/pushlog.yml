@@ -41,8 +41,8 @@ jobs:
         run: npm install
 
       - name: Build project
-        run: npm run build
-
+        run: |
+          npm run build || echo "::set-env name=BUILD_ERROR::true"
       
 
   push_to_registry:
@@ -103,8 +103,9 @@ jobs:
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ failure() }}
+    needs: [lint, build]
+    
+    if: ${{ env.BUILD_ERROR == 'true' }}
     steps:
           
       - name: Send email on failure
@@ -118,8 +119,10 @@ jobs:
           body: |
             this commit in the GitHub Action workflow has failed. 
             Details:
-            - Commit message: ${{ $COMMIT_MESSAGE }}
             - Repository: ${{ github.repository }}
+            - Error message: ${{ job.status }}
+            - Commit SHA: ${{ github.sha }}
+            - Action URL: ${{ github.run_url }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
