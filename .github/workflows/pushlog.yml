@@ -129,8 +129,7 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ failure() }}
     steps:
-      - name: Read error files
-        run: cat error_files.log
+
 
       - name: Send email on failure
         if: ${{ steps.read_error_files.outputs.error_files != '' }}
