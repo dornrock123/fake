@@ -86,33 +86,37 @@ jobs:
     outputs:
       commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Get Commit Info
-      id: get_commit_info
-      run: |
-        AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-        echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
+      - name: Get Commit Info
+        id: get_commit_info
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
 
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
     steps:
-    - name: Send email on failure
-      if: failure()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.GMAIL_USERNAME }}
-        password: ${{ secrets.GMAIL_APP_PASSWORD }}
-        subject: GitHub Action Failure Notification
-        body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
-        to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
-        from: ${{ secrets.GMAIL_USERNAME }}
+      - name: Echo 'fail' message
+        if: ${{ failure() }}
+        run: echo "Fail"
 
-    - name: Send email on success
-      if: success()
-      run: echo "All jobs in the GitHub Action workflow have succeeded."
+      - name: Send email on failure
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: GitHub Action Failure Notification
+          body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
+          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Send email on success
+        if: ${{ success() }}
+        run: echo "All jobs in the GitHub Action workflow have succeeded."
