@@ -90,8 +90,7 @@ jobs:
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
-
+    
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -105,11 +104,15 @@ jobs:
     - name: Check Workflow Status
       id: check_status
       run: |
+        LINT_STATUS_EXISTS='${{ job.lint.status }}'
+        BUILD_STATUS_EXISTS='${{ job.build.status }}'
+        PUSH_STATUS_EXISTS='${{ job.push_to_registry.status }}'
+        
         LINT_STATUS="$( grep -c 'Lint Code Base.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
         BUILD_STATUS="$( grep -c 'Check Code Quality.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
         PUSH_STATUS="$( grep -c 'Push Docker image to Docker Hub.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
-        
-        if [ "${LINT_STATUS}" == "0" ] || [ "${BUILD_STATUS}" == "0" ] || [ "${PUSH_STATUS}" == "0" ]; then
+
+        if [ -z "$LINT_STATUS_EXISTS" ] || [ -z "$BUILD_STATUS_EXISTS" ] || [ -z "$PUSH_STATUS_EXISTS" ] || [ "${LINT_STATUS}" == "0" ] || [ "${BUILD_STATUS}" == "0" ] || [ "${PUSH_STATUS}" == "0" ]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
