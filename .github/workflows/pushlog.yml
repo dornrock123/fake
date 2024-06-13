@@ -105,9 +105,14 @@ jobs:
     - name: Check Workflow Status
       id: check_status
       run: |
-        WORKFLOW_CONCLUSION=${{ job.status.conclusion }}
+        LINT_STATUS=${{ job.lint.status }}
+        BUILD_STATUS=${{ job.build.status }}
+        PUSH_STATUS=${{ job.push_to_registry.status }}
         
-        if [ "$WORKFLOW_CONCLUSION" == "failure" ]; then
+        LINT_OUTPUT="${{ job.lint.node-result-all }}"
+        BUILD_OUTPUT="${{ job.build.node-result-all }}"
+        
+        if [ "$LINT_STATUS" == "failure" ] || [ "$BUILD_STATUS" == "failure" ] || [ "$PUSH_STATUS" == "failure" ] || [[ "$LINT_OUTPUT" == *"error"* ]] || [[ "$BUILD_OUTPUT" == *"error"* ]]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
