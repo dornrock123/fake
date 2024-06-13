@@ -101,18 +101,15 @@ jobs:
       run: |
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
         echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-
+        
     - name: Check Workflow Status
       id: check_status
       run: |
-        LINT_STATUS=${{ job.lint.status }}
-        BUILD_STATUS=${{ job.build.status }}
-        PUSH_STATUS=${{ job.push_to_registry.status }}
+        LINT_STATUS=${{ job.lint.result }}
+        BUILD_STATUS=${{ job.build.result }}
+        PUSH_STATUS=${{ job.push_to_registry.result }}
         
-        LINT_OUTPUT="${{ job.lint.node-result-all }}"
-        BUILD_OUTPUT="${{ job.build.node-result-all }}"
-        
-        if [ "$LINT_STATUS" == "failure" ] || [ "$BUILD_STATUS" == "failure" ] || [ "$PUSH_STATUS" == "failure" ] || [[ "$LINT_OUTPUT" == *"error"* ]] || [[ "$BUILD_OUTPUT" == *"error"* ]]; then
+        if [ "$LINT_STATUS" == "failure" ] || [ "$BUILD_STATUS" == "failure" ] || [ "$PUSH_STATUS" == "failure" ]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
