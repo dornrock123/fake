@@ -112,25 +112,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
 
-    if: failure() && env.BUILD_ERROR == 'true'  # ส่งอีเมล์เฉพาะเมื่อเกิดข้อผิดพลาดใน build และมี BUILD_ERROR ถูกตั้งค่าเป็น 'true'
+    if: ${{ failure() && env.BUILD_ERROR == 'true' }}
 
     steps:
-      - name: Send email on failure
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: GitHub Action Failure Notification
-          body: |
-            The build of the GitHub Action workflow has failed. 
-            Details:
-            - Commit message: ${{ github.event.head_commit.message }}
-            - Repository: ${{ github.repository }}
-          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
-          from: ${{ secrets.GMAIL_USERNAME }}
+    - name: Send email on failure
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.GMAIL_USERNAME }}
+        password: ${{ secrets.GMAIL_APP_PASSWORD }}
+        subject: GitHub Action Failure Notification
+        body: |
+          The build of the GitHub Action workflow has failed. 
+          Details:
+          - Commit message: ${{ github.event.head_commit.message }}
+          - Repository: ${{ github.repository }}
+        to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
+        from: ${{ secrets.GMAIL_USERNAME }}
 
-      - name: Send email on success
-        if: success()
-        run: echo "All jobs in the GitHub Action workflow have succeeded."
+    - name: Send email on success
+      if: success()
+      run: echo "All jobs in the GitHub Action workflow have succeeded."
