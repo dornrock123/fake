@@ -103,7 +103,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
-      changed_files: ${{ steps.get_commit_info.outputs.changed_files }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -114,9 +113,7 @@ jobs:
         id: get_commit_info
         run: |
           AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-          echo "::set-output name=changed_files::${CHANGED_FILES}"
 
   send_notification:
     name: Send Notification
