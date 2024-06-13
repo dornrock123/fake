@@ -43,17 +43,7 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Determine check code result
-        run: |
-          # Replace this with your actual code testing logic
-          # For example, check if a file exists or a script's exit code
-          if [ -f path/to/some/file ]; then
-            echo "Check code succeeded"
-            echo "::set-env name=CHECK_CODE_RESULT::success"
-          else
-            echo "Check code failed"
-            echo "::set-env name=CHECK_CODE_RESULT::failure"
-          fi
+      
 
   push_to_registry:
     name: Push Docker image to Docker Hub
