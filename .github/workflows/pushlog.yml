@@ -51,12 +51,18 @@ jobs:
           if grep -q "error" build_errors.log; then
             echo "Check code failed"
             ERROR_FILES=$(grep "error" build_errors.log | awk -F: '{print $1}' | sort | uniq | tr '\n' ' ')
+            echo "Error files: ${ERROR_FILES}"
             echo "::set-output name=error_files::${ERROR_FILES}"
             exit 1
           else
             echo "Check code succeeded"
             echo "::set-output name=error_files::"
           fi
+
+      - name: Log Error Files
+        if: failure()
+        run: |
+          echo "Logged Error Files: ${{ steps.determine_check_code_result.outputs.error_files }}"
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -134,3 +140,9 @@ jobs:
             ${{ needs.build.outputs.error_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Log Notification Data
+        if: ${{ always() }}
+        run: |
+          echo "Build step error files: ${{ needs.build.outputs.error_files }}"
+          echo "Commit author email: ${{ needs.get_commit_author_email.outputs.commit_author_email }}"
