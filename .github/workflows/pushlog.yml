@@ -114,7 +114,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ env.CHECK_CODE_RESULT == 'failure' }}
+    if: ${{ failure() }}
     steps:
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
