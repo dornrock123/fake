@@ -102,21 +102,8 @@ jobs:
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
         echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
         
-    - name: Check Workflow Status
-      id: check_status
-      run: |
-        LINT_STATUS="${{ needs.lint.result }}"
-        BUILD_STATUS="${{ needs.build.result }}"
-        PUSH_STATUS="${{ needs.push_to_registry.result }}"
-        
-        if [[ "$LINT_STATUS" == "failure" ]] || [[ "$BUILD_STATUS" == "failure" ]] || [[ "$PUSH_STATUS" == "failure" ]]; then
-          echo "::set-output name=status::failure"
-        else
-          echo "::set-output name=status::success"
-        fi
-
     - name: Send Failure Notification
-      if: steps.check_status.outputs.status == 'failure'
+      if: needs.lint.result == 'failure' || needs.build.result == 'failure' || needs.push_to_registry.result == 'failure'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -129,7 +116,7 @@ jobs:
         from: ${{ secrets.GMAIL_USERNAME }}
 
     - name: Send Success Notification
-      if: steps.check_status.outputs.status == 'success'
+      if: needs.lint.result == 'success' && needs.build.result == 'success' && needs.push_to_registry.result == 'success'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
