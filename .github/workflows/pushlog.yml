@@ -46,11 +46,12 @@ jobs:
           npm run build 2> build_errors.log || true
           if grep -q "error" build_errors.log; then
             echo "Check code failed"
-            echo "::set-output name=error_files::$(grep "error" build_errors.log | awk -F: '{print $1}' | sort | uniq | tr '\n' ' ')"
+            ERROR_FILES=$(grep "error" build_errors.log | awk -F: '{print $1}' | sort | uniq | tr '\n' ' ')
+            echo "error_files=$ERROR_FILES" >> $GITHUB_ENV
             exit 1
           else
             echo "Check code succeeded"
-            echo "::set-output name=error_files::"
+            echo "error_files=" >> $GITHUB_ENV
           fi
 
       - name: Determine check code result
@@ -128,7 +129,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ failure() && needs.build.outputs.error_files != '' }}
+    if: ${{ failure() && env.error_files != '' }}
     steps:
     - name: Send email on failure
       uses: dawidd6/action-send-mail@v3
@@ -140,6 +141,6 @@ jobs:
         subject: ${{ github.job }} job of ${{ github.repository }} 
         body: |
           The following files caused errors during the build:
-          ${{ needs.build.outputs.error_files }}
+          ${{ env.error_files }}
         to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
         from: ${{ secrets.GMAIL_USERNAME }}
