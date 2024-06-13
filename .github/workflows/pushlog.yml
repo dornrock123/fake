@@ -4,21 +4,16 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-    types: [closed]
 
 jobs:
-
   lint:
     name: Lint Code Base
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
-      
+
     - name: Run Super-Linter
       uses: github/super-linter@v4
       env:
@@ -29,16 +24,16 @@ jobs:
     name: Check Code Quality
     runs-on: ubuntu-latest
     needs: lint
-    
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
-      
+     
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
         node-version: '18'
-        
+     
     - name: Install dependencies
       run: npm install
 
@@ -49,24 +44,22 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    
     steps:
     - name: Check out the repo
       uses: actions/checkout@v3
-      
+     
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        
+       
     - name: Extract metadata for Docker
       id: meta
       uses: docker/metadata-action@v4
       with:
         images: krisneonploy/dockerbuild
-        
+       
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
@@ -74,9 +67,8 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-
+       
     - name: Create New Branch with Commit Hash
-      if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
@@ -87,50 +79,37 @@ jobs:
         git checkout -b $NEW_BRANCH_NAME
         git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
-  send_notification:
-    name: Send Notification
+  get_commit_author_email:
+    name: Get Commit Author Email
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
-
+    outputs:
+      commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Get Commit Author Email
+    - name: Get Commit Info
       id: get_commit_info
       run: |
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
         echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-        echo "Commit Author Email: ${AUTHOR_EMAIL}"
-        
-    - name: Print Job Status
-      run: |
-        echo "Lint job status: ${{ needs.lint.result }}"
-        echo "Build job status: ${{ needs.build.result }}"
-        echo "Push to registry job status: ${{ needs.push_to_registry.result }}"
+    
+    - name: Show Commit Author Email
+      run: echo "Commit Author Email:${{ steps.get_commit_info.outputs.commit_author_email }}"
 
-    - name: Send Failure Notification
-      if: ${{ needs.lint.result == 'failure' || needs.build.result == 'failure' || needs.push_to_registry.result == 'failure' }}
+  send_notification:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [lint, build, push_to_registry, get_commit_author_email]
+    steps:
+    - name: Send email
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
         server_port: 587
         username: ${{ secrets.GMAIL_USERNAME }}
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
-        subject: GitHub Action Failed
-        body: 'The recent commit has failed the workflow. Please check the details on GitHub.'
-        to: ${{ steps.get_commit_info.outputs.commit_author_email }}
-        from: ${{ secrets.GMAIL_USERNAME }}
-
-    - name: Send Success Notification
-      if: ${{ needs.lint.result == 'success' && needs.build.result == 'success' && needs.push_to_registry.result == 'success' }}
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.GMAIL_USERNAME }}
-        password: ${{ secrets.GMAIL_APP_PASSWORD }}
-        subject: GitHub Action Succeeded
-        body: 'The recent commit has passed the workflow successfully.'
-        to: ${{ steps.get_commit_info.outputs.commit_author_email }}
+        subject: GitHub Action Notification
+        body: 'The recent commit has been processed. Please check the details on GitHub.'
+        to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
         from: ${{ secrets.GMAIL_USERNAME }}
