@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Run Super-Linter
-      uses: github/super-linter@v4
-      env:
-        VALIDATE_ALL_CODEBASE: false
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Super-Linter
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Check Code Quality
@@ -26,58 +26,59 @@ jobs:
     needs: lint
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
      
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
      
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     needs: build
+
     steps:
-    - name: Check out the repo
-      uses: actions/checkout@v3
+      - name: Check out the repo
+        uses: actions/checkout@v3
      
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
        
-    - name: Extract metadata for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: krisneonploy/dockerbuild
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: krisneonploy/dockerbuild
        
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
        
-    - name: Create New Branch with Commit Hash
-      env:
-        GH_PAT: ${{ secrets.GH_PAT }}
-      run: |
-        git config user.name dornrock123
-        git config user.email krisd3214@gmail.com
-        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-        NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
-        git checkout -b $NEW_BRANCH_NAME
-        git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
+      - name: Create New Branch with Commit Hash
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config user.name dornrock123
+          git config user.email krisd3214@gmail.com
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
+          git checkout -b $NEW_BRANCH_NAME
+          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
   get_commit_author_email:
     name: Get Commit Author Email
@@ -85,36 +86,36 @@ jobs:
     outputs:
       commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Get Commit Info
-      id: get_commit_info
-      run: |
-        AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-        echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
+      - name: Get Commit Info
+        id: get_commit_info
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
     
-    - name: Show Commit Author Email
-      run: echo "Commit Author Email:${{ steps.get_commit_info.outputs.commit_author_email }}"
+      - name: Show Commit Author Email
+        run: echo "Commit Author Email ${{ steps.get_commit_info.outputs.commit_author_email }}"
 
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
     steps:
-    - name: Send email on failure
-      if: failure()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.GMAIL_USERNAME }}
-        password: ${{ secrets.GMAIL_APP_PASSWORD }}
-        subject: GitHub Action Failure Notification
-        body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
-        to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
-        from: ${{ secrets.GMAIL_USERNAME }}
+      - name: Send email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: GitHub Action Failure Notification
+          body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
+          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
 
-    - name: Send email on success
-      if: success()
-      run: echo "All jobs in the GitHub Action workflow have succeeded."
+      - name: Send email on success
+        if: success()
+        run: echo "All jobs in the GitHub Action workflow have succeeded."
