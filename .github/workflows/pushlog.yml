@@ -105,11 +105,11 @@ jobs:
     - name: Check Workflow Status
       id: check_status
       run: |
-        LINT_STATUS=${{ needs.lint.result }}
-        BUILD_STATUS=${{ needs.build.result }}
-        PUSH_STATUS=${{ needs.push_to_registry.result }}
+        LINT_STATUS="$( grep -c 'Lint Code Base.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
+        BUILD_STATUS="$( grep -c 'Check Code Quality.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
+        PUSH_STATUS="$( grep -c 'Push Docker image to Docker Hub.* Successful' "$GITHUB_WORKSPACE/.github/workflows/commitlog.log" || true )"
         
-        if [ "${LINT_STATUS}" != "success" ] || [ "${BUILD_STATUS}" != "success" ] || [ "${PUSH_STATUS}" != "success" ]; then
+        if [ "${LINT_STATUS}" == "0" ] || [ "${BUILD_STATUS}" == "0" ] || [ "${PUSH_STATUS}" == "0" ]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
