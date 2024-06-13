@@ -90,7 +90,7 @@ jobs:
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
+  # needs: [lint, build, push_to_registry] ลบส่วนนี้ออก
 
     steps:
     - name: Checkout Code
@@ -105,9 +105,11 @@ jobs:
     - name: Check Workflow Status
       id: check_status
       run: |
-        WORKFLOW_CONCLUSION=${{ job.status.conclusion }}
+        LINT_STATUS=${{ job.lint.status }}
+        BUILD_STATUS=${{ job.build.status }}
+        PUSH_STATUS=${{ job.push_to_registry.status }}
         
-        if [ "$WORKFLOW_CONCLUSION" == "failure" ]; then
+        if [ "$LINT_STATUS" == "failure" ] || [ "$BUILD_STATUS" == "failure" ] || [ "$PUSH_STATUS" == "failure" ]; then
           echo "::set-output name=status::failure"
         else
           echo "::set-output name=status::success"
