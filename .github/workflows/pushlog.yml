@@ -31,12 +31,10 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-     
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '18'
-     
       - name: Install dependencies
         run: npm install
 
@@ -53,8 +51,6 @@ jobs:
           else
             echo "Check code failed"
             echo "::set-env name=CHECK_CODE_RESULT::failure"
-          fi
-
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
@@ -63,19 +59,16 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
-     
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-       
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: krisneonploy/dockerbuild
-       
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -83,7 +76,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-       
       - name: Create New Branch with Commit Hash
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -94,12 +86,12 @@ jobs:
           NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
   get_commit_author_email:
     name: Get Commit Author Email
     runs-on: ubuntu-latest
     outputs:
       commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
+      changed_files: ${{ steps.get_commit_info.outputs.changed_files }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -108,8 +100,9 @@ jobs:
         id: get_commit_info
         run: |
           AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-
+          echo "::set-output name=changed_files::${CHANGED_FILES}"
   send_notification:
     name: Send Notification
     runs-on: ubuntu-latest
@@ -124,10 +117,8 @@ jobs:
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: ${{ github.job }} job of ${{ github.repository }} 
-          body: was failue to commit
+          body: |
+            The following files were committed and pushed:
+            ${{ needs.get_commit_author_email.outputs.changed_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
-
-      - name: Send email on success
-        if: ${{ success() }}
-        run: echo "All jobs in the GitHub Action workflow have succeeded."
