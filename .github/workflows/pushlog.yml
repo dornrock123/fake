@@ -45,6 +45,7 @@ jobs:
 
       # Add additional step to check code
       - name: Check Code
+        id: check_code
         run: |
           # Replace this with your actual code testing logic
           # For example, check if a file exists or a script's exit code
@@ -55,14 +56,10 @@ jobs:
             exit 1  # Exit with non-zero code to indicate failure
           fi
 
-      # Set environment variable based on check result
+      # Set output based on check result
       - name: Set check result
-        run: |
-          if [ $? -eq 0 ]; then
-            echo "::set-env name=CHECK_CODE_RESULT::success"
-          else
-            echo "::set-env name=CHECK_CODE_RESULT::failure"
-          fi
+        if: ${{ steps.check_code.outcome == 'failure' }}
+        run: echo "::set-output name=CHECK_CODE_RESULT::failure"
 
   push_to_registry:
     name: Push Docker image to Docker Hub
