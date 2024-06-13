@@ -118,7 +118,7 @@ jobs:
           body: |
             this commit in the GitHub Action workflow has failed. 
             Details:
-            - Commit message: ${{ "$COMMIT_MESSAGE" }}
+            - Commit message: ${{ $COMMIT_MESSAGE }}
             - Repository: ${{ github.repository }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
