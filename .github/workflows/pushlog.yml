@@ -106,6 +106,12 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ failure() }}
     steps:
+      - name: Get Commit Message
+        id: commit_message
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "::set-output name=message::${COMMIT_MESSAGE}"
+          
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
