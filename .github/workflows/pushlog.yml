@@ -130,9 +130,7 @@ jobs:
     if: ${{ failure() }}
     steps:
 
-
       - name: Send email on failure
-        if: ${{ steps.read_error_files.outputs.error_files != '' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
