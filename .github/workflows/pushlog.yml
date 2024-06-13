@@ -101,9 +101,16 @@ jobs:
       run: |
         AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
         echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
+        echo "Commit Author Email: ${AUTHOR_EMAIL}"
         
+    - name: Print Job Status
+      run: |
+        echo "Lint job status: ${{ needs.lint.result }}"
+        echo "Build job status: ${{ needs.build.result }}"
+        echo "Push to registry job status: ${{ needs.push_to_registry.result }}"
+
     - name: Send Failure Notification
-      if: needs.lint.result == 'failure' || needs.build.result == 'failure' || needs.push_to_registry.result == 'failure'
+      if: ${{ needs.lint.result == 'failure' || needs.build.result == 'failure' || needs.push_to_registry.result == 'failure' }}
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -116,7 +123,7 @@ jobs:
         from: ${{ secrets.GMAIL_USERNAME }}
 
     - name: Send Success Notification
-      if: needs.lint.result == 'success' && needs.build.result == 'success' && needs.push_to_registry.result == 'success'
+      if: ${{ needs.lint.result == 'success' && needs.build.result == 'success' && needs.push_to_registry.result == 'success' }}
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
