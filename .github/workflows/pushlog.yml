@@ -43,23 +43,17 @@ jobs:
       - name: Build project
         run: npm run build
 
-      # Add additional step to check code
-      - name: Check Code
-        id: check_code
+      - name: Determine check code result
         run: |
           # Replace this with your actual code testing logic
           # For example, check if a file exists or a script's exit code
           if [ -f path/to/some/file ]; then
             echo "Check code succeeded"
+            echo "::set-env name=CHECK_CODE_RESULT::success"
           else
             echo "Check code failed"
-            exit 1  # Exit with non-zero code to indicate failure
+            echo "::set-env name=CHECK_CODE_RESULT::failure"
           fi
-
-      # Set output based on check result
-      - name: Set check result
-        if: ${{ steps.check_code.outcome == 'failure' }}
-        run: echo "::set-output name=CHECK_CODE_RESULT::failure"
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -122,12 +116,6 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ failure() }}
     steps:
-      - name: Get Commit Message
-        id: commit_message
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          echo "::set-output name=message::${COMMIT_MESSAGE}"
-
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
@@ -135,12 +123,8 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: 'GitHub Action Failure Notification'
-          body: |
-            One of the jobs in the GitHub Action workflow has failed. 
-            Details:
-            - Commit message: ${{ steps.commit_message.outputs.message }}
-            - Repository: ${{ github.repository }}
+          subject: GitHub Action Failure Notification
+          body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
