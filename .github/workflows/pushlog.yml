@@ -123,8 +123,13 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: GitHub Action Failure Notification
-          body: 'One of the jobs in the GitHub Action workflow has failed. Please check the details on GitHub.'
+          subject: 'GitHub Action Failure Notification'
+          body: |
+            'One of the jobs in the GitHub Action workflow has failed. 
+            Details:
+            - Job name: ${{ github.job }}
+            - Workflow run ID: ${{ github.run_id }}
+            - Error message: ${{ job.status }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
