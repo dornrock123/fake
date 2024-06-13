@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+    types: [closed] # Trigger when a pull request is closed
 
 jobs:
   lint:
@@ -44,6 +48,7 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     steps:
     - name: Check out the repo
       uses: actions/checkout@v3
@@ -67,8 +72,9 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-       
+
     - name: Create New Branch with Commit Hash
+      if: github.event_name == 'push'
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
@@ -95,7 +101,7 @@ jobs:
         echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
     
     - name: Show Commit Author Email
-      run: echo "Commit Author Email:${{ steps.get_commit_info.outputs.commit_author_email }}"
+      run: echo "Commit Author Email ${{ steps.get_commit_info.outputs.commit_author_email }}"
 
   send_notification:
     name: Send Notification
