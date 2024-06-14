@@ -115,12 +115,13 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ failure() }}
+    if: ${{ always() }}
     steps:
       - name: Set up Git
         uses: actions/checkout@v2
 
       - name: Send email on failure
+        if: ${{ failure() }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
