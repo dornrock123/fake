@@ -128,6 +128,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -139,6 +140,7 @@ jobs:
         run: |
           ERROR_FILES="${{ needs.build.outputs.error_files }}"
           echo "::set-output name=error_files::${ERROR_FILES}"
+          echo "${ERROR_FILES}" > error_files.txt
 
       - name: Send email on failure
         if: ${{ steps.read_error_files.outputs.error_files != '' }}
