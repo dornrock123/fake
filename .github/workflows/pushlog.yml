@@ -40,13 +40,23 @@ jobs:
       - name: Build project
         id: build_project
         run: |
-          npm run build 2> build_errors.log
+          # Create an empty build_errors.log file
+          touch build_errors.log
+
+          # Run npm build and capture exit code
+          npm run build 2> temp_errors.log
           exit_code=$?
+
+          # If there are errors, write to build_errors.log
           if [ $exit_code -ne 0 ]; then
+            cat temp_errors.log >> build_errors.log
             echo "::set-output name=error_files::$(cat build_errors.log)"
           else
             echo "::set-output name=error_files::"
           fi
+
+          # Clean up temporary file
+          rm temp_errors.log
 
       - name: Upload Error Files
         if: ${{ steps.build_project.outputs.error_files != '' }}
@@ -104,7 +114,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 2  # Fetch at least 2 commits to compare with previous commit
+          fetch-depth: 2
 
       - name: Get Commit Info
         id: get_commit_info
@@ -122,12 +132,15 @@ jobs:
       - name: Checkout Code and Download Artifact
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Required to retrieve artifacts
+          fetch-depth: 0
 
       - name: Read Error Files
         id: read_error_files
         run: |
-          ERROR_FILES=$(cat build_errors.log)
+          ERROR_FILES=""
+          if [ -f build_errors.log ]; then
+            ERROR_FILES=$(cat build_errors.log)
+          fi
           echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
