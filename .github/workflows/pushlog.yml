@@ -49,9 +49,9 @@ jobs:
 
           # Set output if errors are found
           if [ $exit_code -ne 0 ]; then
-            echo "::set-output name=error_files_present::true"
-          else
             echo "::set-output name=error_files_present::false"
+          else
+            echo "::set-output name=error_files_present::true"
           fi
 
           # Optionally, write error log to a file for later use
@@ -59,7 +59,7 @@ jobs:
           cat build_errors.log
 
       - name: Upload Error Files
-        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'true' }}
+        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'false' }}
         uses: actions/upload-artifact@v3
         with:
           name: error-files
