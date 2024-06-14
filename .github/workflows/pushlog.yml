@@ -43,20 +43,24 @@ jobs:
       - name: Build project and capture errors
         id: build_and_capture_errors
         run: |
-          # Run npm build and capture error logs
+
           npm run build 2> build_errors.log
           exit_code=$?
 
-          # Set output if errors are found
+
           if [ $exit_code -ne 0 ]; then
-            echo "::set-output name=error_files_present::false"
-          else
             echo "::set-output name=error_files_present::true"
+          else
+            echo "::set-output name=error_files_present::false"
           fi
 
-          # Optionally, write error log to a file for later use
+
+          echo "Error files present: ${{ steps.build_and_capture_errors.outputs.error_files_present }}"
+
+
           echo "Build errors:" >> build_errors.log
           cat build_errors.log
+
 
       - name: Upload Error Files
         if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'false' }}
