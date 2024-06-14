@@ -45,6 +45,7 @@ jobs:
         run: |
 
           npm run build > build-results.txt
+        continue-on-error: true
 
       - name: Save build results as output
         id: save_build_results
