@@ -42,11 +42,10 @@ jobs:
 
       - name: Build project and capture errors
         id: build_and_capture_errors
+        continue-on-error: true
         run: |
-
-          npm run build 2> build_errors.log
+          npm run build 2> build_errors.log || true
           exit_code=$?
-
 
           if [ $exit_code -ne 0 ]; then
             echo "::set-output name=error_files_present::true"
@@ -54,9 +53,7 @@ jobs:
             echo "::set-output name=error_files_present::false"
           fi
 
-
           echo "Error files present: ${{ steps.build_and_capture_errors.outputs.error_files_present }}"
-
 
           echo "Build errors:" >> build_errors.log
           cat build_errors.log
