@@ -119,19 +119,15 @@ jobs:
     if: ${{ failure() }}
     steps:
 
-      - name: Checkout Code
+      - name: Checkout Code and Download Artifact
         uses: actions/checkout@v3
-
-      - name: Download Error Files
-        uses: actions/download-artifact@v3
         with:
-          name: error-files
-          path: error-files
+          fetch-depth: 0 # Required to retrieve artifacts
 
       - name: Read Error Files
         id: read_error_files
         run: |
-          ERROR_FILES=$(cat error-files/build_errors.log)
+          ERROR_FILES=$(cat build_errors.log)
           echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
