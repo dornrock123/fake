@@ -46,6 +46,7 @@ jobs:
           # ตรวจสอบว่ามีข้อผิดพลาดหรือไม่
           if [ $? -ne 0 ]; then
             echo "::error::Build failed"
+            echo "Build process encountered an error."
             exit 1
           fi
           echo "::set-output name=CHECK_CODE_RESULT::Build successful"
