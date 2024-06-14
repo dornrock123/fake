@@ -43,22 +43,23 @@ jobs:
       - name: Build project and capture errors
         id: build
         run: |
+          # Run npm build and capture error logs
+          npm run build 2> build_errors.log
+          exit_code=$?
 
-          npm run build > build-results.txt
-        continue-on-error: true
+          # Set output if errors are found
+          if [ $exit_code -ne 0 ]; then
+            echo "::set-output name=error_files_present::true"
+          else
+            echo "::set-output name=error_files_present::false"
+          fi
 
-      - name: Save build results as output
-        id: save_build_results
-        run: |
-          build_results=$(cat build-results.txt)
-          echo "::set-output name=build_results::$build_results"
-
-      - name: Debug build-results
-        run: cat build-results.txt
-
-      - name: Debug output
-        run: echo "build results ${{ steps.save_build_results.outputs.build_results }}"
-
+      - name: Upload Error Files
+        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: error-files
+          path: build_errors.log
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -139,7 +140,7 @@ jobs:
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
             ไฟล์ที่มีข้อผิดพลาด:
-              ${{ steps.save_build_results.outputs.build_results }}
+            ${{ steps.read_error_files.outputs.error_files }}
             -------------------
             ไฟล์ที่มีการแก้ไข:
             ${{ needs.get_commit_author_email.outputs.changed_files }}
