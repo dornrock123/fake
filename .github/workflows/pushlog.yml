@@ -25,9 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
 
-    outputs:
-      error_files_present: ${{ steps.check_error_file.outputs.error_files_present }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -47,20 +44,19 @@ jobs:
           npm run build 2> build_errors.log || true
           exit_code=$?
 
+          # Set output if errors are found
           if [ $exit_code -ne 0 ]; then
             echo "::set-output name=error_files_present::true"
           else
             echo "::set-output name=error_files_present::false"
           fi
 
-          echo "Error files present: ${{ steps.build_and_capture_errors.outputs.error_files_present }}"
-
+          # Optionally, write error log to a file for later use
           echo "Build errors:" >> build_errors.log
           cat build_errors.log
 
-
       - name: Upload Error Files
-        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'false' }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -124,16 +120,39 @@ jobs:
           AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-          echo "::set-output name=changed_files::${CHANGED_FILES}}"
+          echo "::set-output name=changed_files::${CHANGED_FILES}"
 
-  send_failure_notification:
-    name: Send Failure Notification
+  send_notification:
+    name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ always() }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Error Files
+        uses: actions/download-artifact@v3
+        id: download_errors
+        with:
+          name: error-files
+          path: build_errors.log
+        continue-on-error: true  # Continue even if artifact download fails
+
+      - name: Read Error Files
+        id: read_error_files
+        run: |
+          if [ -f build_errors.log ]; then
+            ERROR_FILES=$(cat build_errors.log)
+          else
+            ERROR_FILES=""
+          fi
+          echo "::set-output name=error_files::${ERROR_FILES}"
+
       - name: Send email on failure
-        if: ${{ needs.build.result == 'failure' }}
+        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'true' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -143,6 +162,9 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+            สถานะ: ${{ job.status }}
+            สรุป: ${{ job.conclusion }}
+
             ไฟล์ที่มีข้อผิดพลาด:
             ${{ steps.read_error_files.outputs.error_files }}
             -------------------
@@ -151,25 +173,12 @@ jobs:
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
-  send_success_notification:
-    name: Send Success Notification
-    runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ always() }}
-    steps:
       - name: Send email on success
-        if: ${{ needs.build.result == 'success' }}
+        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'false' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
-          body: |
-            งาน `build` ของ ${{ github.repository }} สำเร็จ
-
-            ไฟล์ที่ถูก commit และ push คือ:
-            ${{ needs.get_commit_author_email.outputs.changed_files }}
-          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
-          from: ${{ secrets.GMAIL_USERNAME }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็
