@@ -128,6 +128,7 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
+    if: always()
 
     steps:
       - name: Checkout Code
@@ -140,25 +141,4 @@ jobs:
         run: |
           ERROR_FILES="${{ needs.build.outputs.error_files }}"
           echo "::set-output name=error_files::${ERROR_FILES}"
-          echo "${ERROR_FILES}" > error_files.txt
-
-      - name: Send email on failure
-        if: ${{ steps.read_error_files.outputs.error_files != '' }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: ${{ github.job }} job of ${{ github.repository }}
-          body: |
-            The following files caused errors during the build:
-            ${{ steps.read_error_files.outputs.error_files }}
-          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-
-      - name: Log Notification Data
-        if: ${{ always() }}
-        run: |
-          echo "Build step error files: ${{ steps.read_error_files.outputs.error_files }}"
-          echo "Commit author email: ${{ needs.get_commit_author_email.outputs.commit_author_email }}"
+          echo "${ERROR_FILES}"
