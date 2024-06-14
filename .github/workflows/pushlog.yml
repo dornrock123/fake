@@ -116,9 +116,13 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: ${{ github.job }} job of ${{ github.repository }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
-            The following files were committed and pushed:
+            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+            ข้อผิดพลาด: ${{ needs.build.outputs.CHECK_CODE_RESULT }}
+
+            ไฟล์ที่ถูก commit และ push คือ:
             ${{ needs.get_commit_author_email.outputs.changed_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
