@@ -43,16 +43,7 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Determine check code result
-        run: |
-          # Replace this with your actual code testing logic
-          # For example, check if a file exists or a script's exit code
-          if [ -f path/to/some/file ]; then
-            echo "Check code succeeded"
-            echo "::set-env name=CHECK_CODE_RESULT::success"
-          else
-            echo "Check code failed"
-            echo "::set-env name=CHECK_CODE_RESULT::failure"
+
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
@@ -92,6 +83,7 @@ jobs:
           NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
+
   get_commit_author_email:
     name: Get Commit Author Email
     runs-on: ubuntu-latest
