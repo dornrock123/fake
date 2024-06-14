@@ -44,7 +44,6 @@ jobs:
         id: build_step
         run: |
           npm run build 2> build_errors.log || true
-
       - name: Determine check code result
         id: determine_check_code_result
         run: |
@@ -59,7 +58,6 @@ jobs:
             echo "Check code succeeded"
             echo "::set-output name=error_files::"
           fi
-
       - name: Log Error Files
         if: failure()
         run: |
@@ -129,6 +127,15 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ failure() }}
     steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Read Error Files
+        id: read_error_files
+        run: |
+          ERROR_FILES=$(cat error_files.log)
+          echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
