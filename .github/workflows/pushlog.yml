@@ -41,7 +41,7 @@ jobs:
         run: npm install
 
       - name: Build project and capture errors
-        id: build
+        id: build_and_capture_errors
         run: |
           # Run npm build and capture error logs
           npm run build 2> build_errors.log
@@ -54,8 +54,12 @@ jobs:
             echo "::set-output name=error_files_present::false"
           fi
 
+          # Optionally, write error log to a file for later use
+          echo "Build errors:" >> build_errors.log
+          cat build_errors.log
+
       - name: Upload Error Files
-        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        if: ${{ steps.build_and_capture_errors.outputs.error_files_present == 'true' }}
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -139,8 +143,6 @@ jobs:
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
             สถานะ: ${{ job.status }}
-            สรุป: ${{ job.conclusion }}
-
             ไฟล์ที่มีข้อผิดพลาด:
             ${{ steps.read_error_files.outputs.error_files }}
             -------------------
