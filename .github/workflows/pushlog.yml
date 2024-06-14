@@ -43,23 +43,8 @@ jobs:
       - name: Build project and capture errors
         id: build
         run: |
-          # Run npm build and capture error logs
-          npm run build 2> build_errors.log
-          exit_code=$?
 
-          # Set output if errors are found
-          if [ $exit_code -ne 0 ]; then
-            echo "::set-output name=error_files_present::true"
-          else
-            echo "::set-output name=error_files_present::false"
-          fi
-
-      - name: Upload Error Files
-        if: ${{ needs.build.outputs.error_files_present == 'true' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: error-files
-          path: build_errors.log
+          npm run build > build_result.txt
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -142,7 +127,7 @@ jobs:
             ${{ steps.read_error_files.outputs.error_files }}
             -------------------
             ไฟล์ที่มีการแก้ไข:
-            ${{ needs.get_commit_author_email.outputs.changed_files }}
+              ${{ steps.build.outputs.build_result }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
