@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
     outputs:
-      error_files: ${{ steps.build_project.outputs.error_files }}
+      error_files_present: ${{ steps.check_error_file.outputs.error_files_present }}
 
     steps:
       - name: Checkout Code
@@ -52,16 +52,20 @@ jobs:
           # If there are errors, write to build_errors.log
           if [ $exit_code -ne 0 ]; then
             cat temp_errors.log >> build_errors.log
-            echo "::set-output name=error_files::$(cat build_errors.log)"
-          else
-            echo "::set-output name=error_files::"
           fi
 
           # Clean up temporary file
           rm temp_errors.log
 
+          # Set output if build_errors.log is not empty
+          if [ -s build_errors.log ]; then
+            echo "::set-output name=error_files_present::true"
+          else
+            echo "::set-output name=error_files_present::false"
+          fi
+
       - name: Upload Error Files
-        if: ${{ steps.build_project.outputs.error_files != '' }}
+        if: ${{ steps.build_project.outputs.error_files_present == 'true' }}
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -136,9 +140,40 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download Error Files
+        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: error-files
+          path: error_files.txt
+
       - name: Read Error Files
         id: read_error_files
         run: |
-          ERROR_FILES="${{ needs.build.outputs.error_files }}"
+          if [ -f error_files.txt ]; then
+            ERROR_FILES=$(cat error_files.txt)
+          else
+            ERROR_FILES=""
+          fi
           echo "::set-output name=error_files::${ERROR_FILES}"
-          echo "${ERROR_FILES}"
+
+      - name: Send email on failure
+        if: ${{ steps.read_error_files.outputs.error_files != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: ${{ github.job }} job of ${{ github.repository }}
+          body: |
+            The following files caused errors during the build:
+            ${{ steps.read_error_files.outputs.error_files }}
+          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Log Notification Data
+        if: always()
+        run: |
+          echo "Build step error files: ${{ steps.read_error_files.outputs.error_files }}"
+          echo "Commit author email: ${{ needs.get_commit_author_email.outputs.commit_author_email }}"
