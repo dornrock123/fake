@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Upload Error Files
-        if: ${{ always() }}  # Always attempt to upload, even if empty
+        if: always()  # Always attempt to upload, even if empty
         uses: actions/upload-artifact@v3
         with:
           name: error-files
