@@ -117,23 +117,6 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ failure() }}
     steps:
-      - name: Get Error Details
-        id: error_details
-        run: |
-          echo "Error details:"
-          if [ -f lint_results.log ]; then
-            echo "Lint results:"
-            cat lint_results.log  # Replace with actual linting results
-          else
-            echo "No lint results found."
-          fi
-          if [ -f build.log ]; then
-            echo "Build log:"
-            cat build.log         # Replace with actual build log
-          else
-            echo "No build log found."
-          fi
-
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
@@ -143,10 +126,7 @@ jobs:
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: ${{ github.job }} job of ${{ github.repository }}
           body: |
-            The following error occurred in job: ${{ github.job }} of ${{ github.repository }}
-            Error details:
-            ${{ steps.error_details.outputs.stdout }}
+            The following files were committed and pushed:
+            ${{ needs.get_commit_author_email.outputs.changed_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
-
-
