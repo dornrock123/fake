@@ -134,7 +134,6 @@ jobs:
       - name: Read Error Files
         id: read_error_files
         run: |
-          ERROR_FILES=$(cat error_files.log)
           echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
