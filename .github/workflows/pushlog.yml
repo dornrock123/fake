@@ -25,9 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
 
-    outputs:
-      error_files_present: ${{ steps.check_error_file.outputs.error_files_present }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -41,21 +38,21 @@ jobs:
         run: npm install
 
       - name: Build project and capture errors
-        id: build
+        id: build_and_capture_errors
+        continue-on-error: true
         run: |
-          # Run npm build and capture error logs
           npm run build 2> build_errors.log
           exit_code=$?
 
           # Set output if errors are found
           if [ $exit_code -ne 0 ]; then
-            echo "::set-output name=error_files_present::true"
+            echo "error_files_present=true" >> $GITHUB_ENV
           else
-            echo "::set-output name=error_files_present::false"
+            echo "error_files_present=false" >> $GITHUB_ENV
           fi
 
       - name: Upload Error Files
-        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -97,7 +94,7 @@ jobs:
           git config user.name dornrock123
           git config user.email krisd3214@gmail.com
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
+          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' '[:space:]' '-' | tr '[:punct:]' '-')"
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
@@ -119,16 +116,39 @@ jobs:
           AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "::set-output name=commit_author_email::${AUTHOR_EMAIL}"
-          echo "::set-output name=changed_files::${CHANGED_FILES}}"
+          echo "::set-output name=changed_files::${CHANGED_FILES}"
 
-  send_failure_notification:
-    name: Send Failure Notification
+  send_notification:
+    name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ always() }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Error Files
+        uses: actions/download-artifact@v3
+        id: download_errors
+        with:
+          name: error-files
+          path: build_errors.log
+        continue-on-error: true  # Continue even if artifact download fails
+
+      - name: Read Error Files
+        id: read_error_files
+        run: |
+          if [ -f build_errors.log ]; then
+            ERROR_FILES=$(cat build_errors.log)
+          else
+            ERROR_FILES=""
+          fi
+          echo "::set-output name=error_files::${ERROR_FILES}"
+
       - name: Send email on failure
-        if: ${{ needs.build.result == 'failure' }}
+        if: ${{ env.error_files_present == 'true' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -139,6 +159,8 @@ jobs:
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
             สถานะ: ${{ job.status }}
+            สรุป: ${{ job.conclusion }}
+
             ไฟล์ที่มีข้อผิดพลาด:
             ${{ steps.read_error_files.outputs.error_files }}
             -------------------
@@ -147,14 +169,8 @@ jobs:
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
-  send_success_notification:
-    name: Send Success Notification
-    runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ always() }}
-    steps:
       - name: Send email on success
-        if: ${{ needs.build.result == 'success' }}
+        if: ${{ env.error_files_present == 'false' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
