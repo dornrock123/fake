@@ -44,7 +44,20 @@ jobs:
         id: build
         run: |
 
-          npm run build > build_result.txt
+          npm run build > build-results.txt
+
+      - name: Save build results as output
+        id: save_build_results
+        run: |
+          build_results=$(cat build-results.txt)
+          echo "::set-output name=build_results::$build_results"
+
+      - name: Debug build-results
+        run: cat build-results.txt
+
+      - name: Debug output
+        run: echo "build results ${{ steps.save_build_results.outputs.build_results }}"
+
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -123,11 +136,12 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+
             ไฟล์ที่มีข้อผิดพลาด:
-            ${{ steps.read_error_files.outputs.error_files }}
+              ${{ steps.save_build_results.outputs.build_results }}
             -------------------
             ไฟล์ที่มีการแก้ไข:
-              ${{ steps.build.outputs.build_result }}
+            ${{ needs.get_commit_author_email.outputs.changed_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
