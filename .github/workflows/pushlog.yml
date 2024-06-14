@@ -119,10 +119,12 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
-            ข้อผิดพลาด: ${{ needs.build.outputs.CHECK_CODE_RESULT }}
+            สถานะ: ${{ job.status }}
+            สรุป: ${{ job.conclusion }}
 
             ไฟล์ที่ถูก commit และ push คือ:
             ${{ needs.get_commit_author_email.outputs.changed_files }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
 
