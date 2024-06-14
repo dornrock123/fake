@@ -138,7 +138,6 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
-            สถานะ: ${{ job.status }}
             ไฟล์ที่มีข้อผิดพลาด:
             ${{ steps.read_error_files.outputs.error_files }}
             -------------------
