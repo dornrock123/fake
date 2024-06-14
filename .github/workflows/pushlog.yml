@@ -26,7 +26,7 @@ jobs:
     needs: lint
 
     outputs:
-      CHECK_CODE_RESULT: ${{ steps.build.outputs.CHECK_CODE_RESULT }}
+      error_files_present: ${{ steps.check_error_file.outputs.error_files_present }}
 
     steps:
       - name: Checkout Code
@@ -40,17 +40,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build project
+      - name: Build project and capture errors
         id: build
         run: |
-          npm run build
-          if [ $? -eq 0 ]; then
-            echo "Build successful"
+          # Run npm build and capture error logs
+          npm run build 2> build_errors.log
+          exit_code=$?
+
+          # Set output if errors are found
+          if [ $exit_code -ne 0 ]; then
+            echo "::set-output name=error_files_present::true"
           else
-            echo "Build failed"
-            exit 1
+            echo "::set-output name=error_files_present::false"
           fi
-          echo "::set-output name=CHECK_CODE_RESULT::${{ steps.build.outputs.run }}"
+
+      - name: Upload Error Files
+        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: error-files
+          path: build_errors.log
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -118,8 +127,28 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ always() }}
     steps:
-      - name: Set up Git
-        uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Error Files
+        uses: actions/download-artifact@v3
+        id: download_errors
+        with:
+          name: error-files
+          path: build_errors.log
+        continue-on-error: true  # Continue even if artifact download fails
+
+      - name: Read Error Files
+        id: read_error_files
+        run: |
+          if [ -f build_errors.log ]; then
+            ERROR_FILES=$(cat build_errors.log)
+          else
+            ERROR_FILES=""
+          fi
+          echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
         if: ${{ needs.build.result == 'failure' }}
@@ -132,7 +161,28 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
-            ข้อผิดพลาด: ${{ needs.build.outputs.CHECK_CODE_RESULT }}
+            สถานะ: ${{ job.status }}
+            สรุป: ${{ job.conclusion }}
+
+            ไฟล์ที่มีข้อผิดพลาด:
+            ${{ steps.read_error_files.outputs.error_files }}
+            -------------------
+            ไฟล์ที่มีการแก้ไข:
+            ${{ needs.get_commit_author_email.outputs.changed_files }}
+          to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Send email on success
+        if: ${{ needs.build.result == 'success' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
+          body: |
+            งาน `build` ของ ${{ github.repository }} สำเร็จ
 
             ไฟล์ที่ถูก commit และ push คือ:
             ${{ needs.get_commit_author_email.outputs.changed_files }}
