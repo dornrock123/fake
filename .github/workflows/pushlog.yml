@@ -42,14 +42,13 @@ jobs:
 
       - name: Build project
         run: |
-          npm run build  # คำสั่งในการคอมไพล์โปรเจกต์
-          if [ $? -eq 0 ]; then  # ตรวจสอบว่าคอมไพล์สำเร็จหรือไม่
-            echo "::set-output name=CHECK_CODE_RESULT::Build successful"  # ตั้งค่า output ชื่อ CHECK_CODE_RESULT ว่า Build successful
+          npm run build
+          if [ $? -eq 0 ]; then
+            echo "::set-output name=CHECK_CODE_RESULT::Build successful"
           else
-            echo "::error::Build failed"  # แสดงข้อความว่า Build failed ในหน้าต่าง GitHub Actions
-            exit 1  # ออกจากการทำงานด้วยสถานะ exit code 1 หมายถึงการทำงานล้มเหลว
+            echo "::error::Build failed"
+            exit 1
           fi
-
 
   push_to_registry:
     name: Push Docker image to Docker Hub
