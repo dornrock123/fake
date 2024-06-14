@@ -120,13 +120,19 @@ jobs:
       - name: Get Error Details
         id: error_details
         run: |
-          # Capture additional error details from previous jobs
-          # Example: Capture linting errors or build failures
           echo "Error details:"
-          echo "Lint results:"
-          cat lint_results.log  # Replace with actual linting results
-          echo "Build log:"
-          cat build.log         # Replace with actual build log
+          if [ -f lint_results.log ]; then
+            echo "Lint results:"
+            cat lint_results.log  # Replace with actual linting results
+          else
+            echo "No lint results found."
+          fi
+          if [ -f build.log ]; then
+            echo "Build log:"
+            cat build.log         # Replace with actual build log
+          else
+            echo "No build log found."
+          fi
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
@@ -142,4 +148,5 @@ jobs:
             ${{ steps.error_details.outputs.stdout }}
           to: ${{ needs.get_commit_author_email.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
 
