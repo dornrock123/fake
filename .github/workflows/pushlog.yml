@@ -24,6 +24,8 @@ jobs:
     name: Check Code Quality
     runs-on: ubuntu-latest
     needs: lint
+    outputs:
+      error_files: ${{ steps.build_project.outputs.error_files }}
 
     steps:
       - name: Checkout Code
@@ -126,9 +128,8 @@ jobs:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: [lint, build, push_to_registry, get_commit_author_email]
-    if: ${{ failure() && steps.read_error_files.outputs.error_files != '' }}
+    if: ${{ needs.build.outputs.error_files != '' }}
     steps:
-
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
@@ -137,14 +138,10 @@ jobs:
       - name: Read Error Files
         id: read_error_files
         run: |
-          ERROR_FILES=""
-          if [ -f build_errors.log ]; then
-            ERROR_FILES=$(cat build_errors.log)
-          fi
+          ERROR_FILES=$(echo "${{ needs.build.outputs.error_files }}")
           echo "::set-output name=error_files::${ERROR_FILES}"
 
       - name: Send email on failure
-        if: ${{ steps.read_error_files.outputs.error_files != '' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
