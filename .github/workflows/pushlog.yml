@@ -127,6 +127,16 @@ jobs:
     needs: [lint, build, push_to_registry, get_commit_author_email]
     if: ${{ always() }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Read Error Log
+        id: read_error_log
+        if: ${{ needs.build.outputs.error_files_present == 'true' }}
+        run: |
+          error_log=$(docker run --rm krisneonploy/dockerbuild cat /usr/share/nginx/html/build.log)
+          echo "::set-output name=error_log::$error_log"
+
       - name: Send email on failure
         if: ${{ needs.build.result == 'failure' }}
         uses: dawidd6/action-send-mail@v3
@@ -140,7 +150,7 @@ jobs:
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
             ไฟล์ที่มีข้อผิดพลาด:
-            ${{ steps.read_error_files.outputs.error_files }}
+            ${{ steps.read_error_log.outputs.error_log }}
             -------------------
             ไฟล์ที่มีการแก้ไข:
             ${{ needs.get_commit_author_email.outputs.changed_files }}

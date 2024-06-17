@@ -13,14 +13,17 @@ RUN npm install
 # คัดลอกโค้ด Angular app เข้าไปยังโฟลเดอร์ทำงาน
 COPY . .
 
-# สร้างและ compile Angular app สำหรับ production
-RUN npm run build -- --configuration=production
+# ปรับปรุงการรันคำสั่ง npm run build ให้มีการรายงานข้อผิดพลาด
+RUN npm run build -- --output-hashing=none > build.log 2>&1 || (cat build.log && exit 1)
 
 # ขั้นตอนการสร้างภาพ Docker สำหรับ production
 FROM nginx:alpine
 
 # คัดลอกไฟล์ build จากภาพ builder มายังโฟลเดอร์ที่เหมาะสมใน Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# คัดลอกไฟล์ log ของการ build มาด้วย
+COPY --from=builder /app/build.log /usr/share/nginx/html/
 
 # Expose port 80 to the outside world
 EXPOSE 80
