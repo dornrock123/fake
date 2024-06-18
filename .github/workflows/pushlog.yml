@@ -158,6 +158,7 @@ jobs:
                     non_error_files+="$file "
                 fi
             done <<< "$changed_files"
+            non_error_files=$(echo "$non_error_files" | tr ' ' '%20')
             echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
 
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
