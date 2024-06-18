@@ -141,15 +141,18 @@ jobs:
           commit_author_email=$(git log -1 --pretty=format:'%ae')
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
 
-          error_files=$(grep -o '/.*' build_errors.log | cut -d'/' -f2- | tr '\n' '%20' | sed 's/%20$//')
+          error_files=$(grep -o '/.*' build_errors.log | tr '\n' '%20' | sed 's/%20$//')
           echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
-          error_files_array=($(echo "$error_files" | tr '%20' '\n'))
+          error_paths=$(grep -o '/.*' build_errors.log | cut -d'/' -f1- | tr '\n' '%20' | sed 's/%20$//')
+          echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
+
+          error_paths_array=($(echo "$error_paths" | tr '%20' '\n'))
           non_error_files=""
           while read -r file; do
               is_error=0
-              for error_file in "${error_files_array[@]}"; do
-                  if [ "$file" == "$error_file" ]; then
+              for error_path in "${error_paths_array[@]}"; do
+                  if [[ "$file" == *"$error_path"* ]]; then
                       is_error=1
                       break
                   fi
@@ -178,8 +181,11 @@ jobs:
             ข้อผิดพลาด:
             ${{ steps.error_info.outputs.error_log }}
             -------------------
-            พาทของไฟล์ที่มีข้อผิดพลาด:
+            ไฟล์และพาทที่มีข้อผิดพลาด:
             ${{ steps.error_info.outputs.error_files }}
+            -------------------
+            พาทของไฟล์ที่มีข้อผิดพลาด:
+            ${{ steps.error_info.outputs.error_paths }}
             -------------------
             ไฟล์และพาทที่ไม่มีข้อผิดพลาด:
             ${{ steps.error_info.outputs.non_error_files }}
