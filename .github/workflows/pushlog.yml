@@ -144,7 +144,7 @@ jobs:
             error_files=$(grep -o '/.*' build_errors.log | tr '\n' ' ' | sed 's/ $//')
             echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
-            non_error_files=$(comm -13 <(printf '%s\n' $changed_files | sort) <(printf '%s\n' $error_files | sort) | tr '\n' ' ' | sed 's/ $//')
+            non_error_files=$(comm -13 <(printf '%s\n' $changed_files | sort) <(printf '%s\n' $error_files | sort) | grep -o '/.*' | cut -d'/' -f2- | tr '\n' ' ' | sed 's/ $//')
             echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
 
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
@@ -167,7 +167,7 @@ jobs:
               ไฟล์และพาทที่มีข้อผิดพลาด:
               ${{ steps.error_info.outputs.error_files }}
               -------------------
-              ไฟล์ที่ไม่มีข้อผิดพลาด:
+              พาทของไฟล์ที่ไม่มีข้อผิดพลาด:
               ${{ steps.error_info.outputs.non_error_files }}
               -------------------
               ไฟล์ที่มีการแก้ไข:
