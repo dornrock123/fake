@@ -144,7 +144,8 @@ jobs:
             error_files=$(grep -o '/.*' build_errors.log | tr '\n' ' ' | sed 's/ $//')
             echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
-            non_error_files=$(comm -13 <(printf '%s\n' $changed_files | sort) <(printf '%s\n' $error_files | sort) | tr '\n' ' ' | sed 's/ $//')
+            all_files=$(printf '%s\n' $changed_files | tr ' ' '\n')
+            non_error_files=$(comm -23 <(printf '%s\n' $all_files | sort) <(printf '%s\n' $error_files | sort))
             echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
 
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
