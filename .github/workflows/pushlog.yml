@@ -141,7 +141,7 @@ jobs:
             commit_author_email=$(git log -1 --pretty=format:'%ae')
             changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
 
-            error_files=$(grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | uniq | tr '\n' ' ' | sed 's/ $//')
+            error_files=$(grep -o '/.*' build_errors.log | tr '\n' ' ' | sed 's/ $//')
             echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
             error_files_array=($(echo "$error_files" | tr ' ' '\n'))
