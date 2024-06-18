@@ -145,7 +145,7 @@ jobs:
             echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
             all_files=$(printf '%s\n' $changed_files | tr ' ' '\n')
-            non_error_files=$(comm -23 <(printf '%s\n' $all_files | sort) <(printf '%s\n' $error_files | sort))
+            non_error_files=$(comm -23 <(printf '%s\n' $all_files | sort) <(printf '%s\n' $error_files | sort) | tr '\n' ' ')
             echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
 
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
@@ -160,19 +160,18 @@ jobs:
               password: ${{ secrets.GMAIL_APP_PASSWORD }}
               subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
               body: |
-                  ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+                ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
-                  ข้อผิดพลาด:
-                  ${{ steps.error_info.outputs.error_log }}
-                  -------------------
-                  ไฟล์และพาทที่มีข้อผิดพลาด:
-                  ${{ steps.error_info.outputs.error_files }}
-                  -------------------
-                  ไฟล์และพาทที่ไม่มีข้อผิดพลาด:
-                  ${{ steps.error_info.outputs.non_error_files }}
-                  -------------------
-                  ไฟล์ที่มีการแก้ไข:
-                  ${{ steps.error_info.outputs.changed_files }}
+                ข้อผิดพลาด:
+                ${{ steps.error_info.outputs.error_log }}
+                -------------------
+                ไฟล์และพาทที่มีข้อผิดพลาด:
+                ${{ steps.error_info.outputs.error_files }}
+                -------------------
+                ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
+                -------------------
+                ไฟล์ที่มีการแก้ไข:
+                ${{ steps.error_info.outputs.changed_files }}
               to: ${{ steps.error_info.outputs.commit_author_email }}
               from: ${{ secrets.GMAIL_USERNAME }}
 
