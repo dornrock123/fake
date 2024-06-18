@@ -145,7 +145,20 @@ jobs:
             echo "error_files=$error_files" >> $GITHUB_OUTPUT
 
             all_files=$(printf '%s\n' $changed_files | tr ' ' '\n')
-            non_error_files=$(comm -23 <(printf '%s\n' $all_files | sort) <(printf '%s\n' $error_files | sort) | tr '\n' ' ')
+            error_files_array=($(echo "$error_files" | tr ' ' '\n'))
+            non_error_files=""
+            for file in $all_files; do
+                skip=0
+                for error_file in "${error_files_array[@]}"; do
+                    if [ "$file" == "$error_file" ]; then
+                        skip=1
+                        break
+                    fi
+                done
+                if [ $skip -eq 0 ]; then
+                    non_error_files+="$file "
+                fi
+            done
             echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
 
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
