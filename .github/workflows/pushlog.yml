@@ -120,51 +120,50 @@ jobs:
     needs: build
     if: ${{ failure() }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
 
-      - name: Download Error Files
-        uses: actions/download-artifact@v3
-        with:
-          name: error-files
+    - name: Download Error Files
+      uses: actions/download-artifact@v3
+      with:
+        name: error-files
 
-      - name: Get Error Log and Changed Files Info
-        id: error_info
-        run: |
-          commit_author_email=$(git log -1 --pretty=format:'%ae')
-          error_log=$(cat build_errors.log)
-          raw_error_files=$(grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | tr '\n' ',')
+    - name: Get Error Log and Changed Files Info
+      id: error_info
+      run: |
+        commit_author_email=$(git log -1 --pretty=format:'%ae')
+        error_log=$(cat build_errors.log)
+        raw_error_files=$(grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | tr '\n' ',')
+        error_files="${raw_error_files%?}"
+        changed_files=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ',' | sed 's/,$//')
 
-          # ตรวจสอบว่ามีข้อผิดพลาดหรือไม่จากไฟล์ log
-          if grep -q "/" build_errors.log; then
-            error_files="${raw_error_files%?}"
-            non_error_files=$(comm -23 <(git diff-tree --no-commit-id --name-only -r HEAD | sort -u) <(echo "$raw_error_files" | tr ',' '\n' | sort -u) | tr '\n' ',' | sed 's/,$//')
-          else
-            error_files=""
-            non_error_files=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ',' | sed 's/,$//')
-          fi
+        if [ -z "$error_files" ]; then
+          error_paths="ไม่พบข้อผิดพลาด"
+          non_error_files="$changed_files"
+        else
+          error_paths="$error_files"
+          non_error_files=$(comm -23 <(echo "$changed_files" | tr ',' '\n' | sort -u) <(echo "$raw_error_files" | tr ',' '\n' | sort -u) | tr '\n' ',' | sed 's/,$//')
+        fi
 
-          changed_files=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ',' | sed 's/,$//')
+        echo "error_log<<EOF" >> $GITHUB_OUTPUT
+        echo "$error_log" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
+        echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
+        echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+        echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
 
-          echo "error_log<<EOF" >> $GITHUB_OUTPUT
-          echo "$error_log" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "error_paths=$error_files" >> $GITHUB_OUTPUT
-          echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
-          echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
-          echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
-
-      - name: Send email on failure
-        env:
+    - name: Send email on failure
+      env:
           ERROR_LOG: ${{ steps.error_info.outputs.error_log }}
           ERROR_PATHS: ${{ steps.error_info.outputs.error_paths }}
           NON_ERROR_FILES: ${{ steps.error_info.outputs.non_error_files }}
           CHANGED_FILES: ${{ steps.error_info.outputs.changed_files }}
           COMMIT_AUTHOR_EMAIL: ${{ steps.error_info.outputs.commit_author_email }}
-        uses: dawidd6/action-send-mail@v3
-        with:
+      uses: dawidd6/action-send-mail@v3
+      with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
