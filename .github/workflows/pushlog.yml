@@ -140,10 +140,9 @@ jobs:
           # ตรวจสอบว่ามีข้อผิดพลาดหรือไม่จากไฟล์ log
           if grep -q "/" build_errors.log; then
             error_files="${raw_error_files%?}"
-            error_paths="$error_files"
             non_error_files=$(comm -23 <(git diff-tree --no-commit-id --name-only -r HEAD | sort -u) <(echo "$raw_error_files" | tr ',' '\n' | sort -u) | tr '\n' ',' | sed 's/,$//')
           else
-            error_paths="ไม่พบข้อผิดพลาด"
+            error_files=""
             non_error_files=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ',' | sed 's/,$//')
           fi
 
@@ -152,12 +151,10 @@ jobs:
           echo "error_log<<EOF" >> $GITHUB_OUTPUT
           echo "$error_log" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
+          echo "error_paths=$error_files" >> $GITHUB_OUTPUT
           echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
-
-
 
       - name: Send email on failure
         env:
