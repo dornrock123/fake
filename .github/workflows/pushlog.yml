@@ -139,17 +139,16 @@ jobs:
 
           if [ -n "$raw_error_files" ]; then
             error_files="${raw_error_files%?}"
-            error_paths="$error_files"
-            non_error_files=$(comm -23 <(echo "$all_files") <(echo "$raw_error_files" | tr ',' '\n' | sort -u) | tr '\n' ',' | sed 's/,$//')
           else
-            error_paths="ไม่พบข้อผิดพลาด"
-            non_error_files="$changed_files"
+            error_files=""
           fi
+
+          non_error_files=$(comm -23 <(echo "$all_files") <(echo "$error_files" | tr ',' '\n' | sort -u) | tr '\n' ',' | sed 's/,$//')
 
           echo "error_log<<EOF" >> $GITHUB_OUTPUT
           echo "$error_log" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
+          echo "error_files=$error_files" >> $GITHUB_OUTPUT
           echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
@@ -157,7 +156,7 @@ jobs:
       - name: Send email on failure
         env:
           ERROR_LOG: ${{ steps.error_info.outputs.error_log }}
-          ERROR_PATHS: ${{ steps.error_info.outputs.error_paths }}
+          ERROR_FILES: ${{ steps.error_info.outputs.error_files }}
           NON_ERROR_FILES: ${{ steps.error_info.outputs.non_error_files }}
           CHANGED_FILES: ${{ steps.error_info.outputs.changed_files }}
           COMMIT_AUTHOR_EMAIL: ${{ steps.error_info.outputs.commit_author_email }}
@@ -170,9 +169,9 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
-            ไฟล์และพาทที่มีข้อผิดพลาด: ${{ env.ERROR_PATHS }}
+            ไฟล์ที่มีข้อผิดพลาด: ${{ env.ERROR_FILES }}
             -------------------
-            ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ env.NON_ERROR_FILES }}
+            ไฟล์ที่ไม่มีข้อผิดพลาด: ${{ env.NON_ERROR_FILES }}
             -------------------
             ไฟล์ที่มีการแก้ไข: ${{ env.CHANGED_FILES }}
             -------------------
