@@ -133,10 +133,8 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-              error_log=$(head -n 1 build_errors.log)
-              error_log="${error_log//'%'/'%25'}"
-              error_log="${error_log//$'\n'/'%0A'}"
-              error_log="${error_log//$'\r'/'%0D'}"
+              error_lines=$(grep -n -E '.*Error.*|.*error.*|.*WARNING.*|.*warning.*' build_errors.log)
+              error_log=$(echo "$error_lines" | tr '\n' '%0A')
               echo "error_log<<EOF" >> $GITHUB_OUTPUT
               echo "$error_log" >> $GITHUB_OUTPUT
               echo "EOF" >> $GITHUB_OUTPUT
