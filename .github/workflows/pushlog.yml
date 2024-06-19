@@ -137,7 +137,7 @@ jobs:
             changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
 
             error_paths=$(grep -q '/' build_errors.log && (grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | uniq | awk '{print NR ". " $0}' | tr '\n' '%0a' | sed 's/%0a$//' ) || echo "ไม่พบข้อผิดพลาด")
-            error_paths="${error_paths//%0a/\n}"
+            error_paths="${error_paths//'%0a'/'\n'}"
             echo "::set-output name=error_paths::$error_paths"
 
             error_files_array=($(echo "$error_paths" | tr '%0a' '\n' | sed 's/^[0-9]\+\. //'))
