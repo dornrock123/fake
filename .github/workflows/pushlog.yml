@@ -133,7 +133,7 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-              error_log=$(cat build_errors.log)
+              error_log=$(head -n 1 build_errors.log)
               error_log="${error_log//'%'/'%25'}"
               error_log="${error_log//$'\n'/'%0A'}"
               error_log="${error_log//$'\r'/'%0D'}"
