@@ -130,66 +130,51 @@ jobs:
         with:
           name: error-files
 
-      - name: Get Error Log and Commit Info
+      - name: Get Error Log and Changed Files Info
         id: error_info
         run: |
-            commit_author_email=$(git log -1 --pretty=format:'%ae')
-            changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
+          commit_author_email=$(git log -1 --pretty=format:'%ae')
+          error_files=$(grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | tr '\n' ' ')
+          non_error_files=$(comm -23 <(git diff-tree --no-commit-id --name-only -r HEAD | sort -u) <(echo "$error_files" | tr ' ' '\n' | sort -u) | tr '\n' ' ')
+          changed_files=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ' ')
 
-            error_paths=$(grep -q '/' build_errors.log && (grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | uniq | awk '{print NR ". " $0}' | tr '\n' '%0a' | sed 's/%0a$//' ) || echo "ไม่พบข้อผิดพลาด")
-            error_paths="${error_paths//'%0a'/'\n'}"
-            echo "::set-output name=error_paths::$error_paths"
-
-            error_files_array=($(echo "$error_paths" | tr '%0a' '\n' | sed 's/^[0-9]\+\. //'))
-            non_error_files=""
-            while read -r file; do
-                is_error=0
-                for error_file in "${error_files_array[@]}"; do
-                    if [ "$file" == "$error_file" ]; then
-                        is_error=1
-                        break
-                    fi
-                done
-                if [ $is_error -eq 0 ]; then
-                    non_error_files+="$file "
-                fi
-            done <<< "$changed_files"
-            non_error_files=$(echo "$non_error_files" | tr ' ' '%20')
-            echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
-
-            echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
-            echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+          echo "error_files=$error_files" >> $GITHUB_OUTPUT
+          echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
+          echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+          echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
 
       - name: Upload Error Log
         uses: actions/upload-artifact@v3
         with:
-            name: error-log
-            path: build_errors.log
+          name: error-log
+          path: build_errors.log
 
       - name: Send email on failure
+        env:
+          ERROR_FILES: ${{ steps.error_info.outputs.error_files }}
+          NON_ERROR_FILES: ${{ steps.error_info.outputs.non_error_files }}
+          CHANGED_FILES: ${{ steps.error_info.outputs.changed_files }}
+          COMMIT_AUTHOR_EMAIL: ${{ steps.error_info.outputs.commit_author_email }}
         uses: dawidd6/action-send-mail@v3
         with:
-            server_address: smtp.gmail.com
-            server_port: 587
-            username: ${{ secrets.GMAIL_USERNAME }}
-            password: ${{ secrets.GMAIL_APP_PASSWORD }}
-            subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
-            body: |
-              ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
+          body: |
+            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
-              ไฟล์และพาทที่มีข้อผิดพลาด:
-              ${{ steps.error_info.outputs.error_paths || 'ไม่พบข้อผิดพลาด' }}
-              -------------------
-              ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
-              -------------------
-              ไฟล์ที่มีการแก้ไข:
-              ${{ steps.error_info.outputs.changed_files }}
-              -------------------
-              สำหรับข้อผิดพลาดทั้งหมด โปรดดาวน์โหลดไฟล์แนบ
-
-            attachments: error-log@${{ github.workspace }}/build_errors.log
-            to: ${{ steps.error_info.outputs.commit_author_email }}
-            from: ${{ secrets.GMAIL_USERNAME }}
+            ไฟล์และพาทที่มีข้อผิดพลาด: ${{ env.ERROR_FILES }}
+            -------------------
+            ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ env.NON_ERROR_FILES }}
+            -------------------
+            ไฟล์ที่มีการแก้ไข: ${{ env.CHANGED_FILES }}
+            -------------------
+            สำหรับข้อผิดพลาดทั้งหมด โปรดดาวน์โหลดไฟล์แนบ
+          attachments: error-log@${{ github.workspace }}/build_errors.log
+          to: ${{ env.COMMIT_AUTHOR_EMAIL }}
+          from: ${{ secrets.GMAIL_USERNAME }}
 
   send_success_notification:
             name: Send Success Notification
