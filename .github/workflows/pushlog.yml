@@ -137,9 +137,8 @@ jobs:
             changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
 
             error_paths=$(grep -q '/' build_errors.log && (grep -o '/.*' build_errors.log | cut -d'/' -f1 | sort -u | uniq | awk '{print NR ". " $0}' | tr '\n' '%0a' | sed 's/%0a$//' ) || echo "ไม่พบข้อผิดพลาด")
-            echo "error_paths<<EOF" >> $GITHUB_OUTPUT
-            echo "$error_paths" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            error_paths="${error_paths//%0a/\n}"
+            echo "::set-output name=error_paths::$error_paths"
 
             error_files_array=($(echo "$error_paths" | tr '%0a' '\n' | sed 's/^[0-9]\+\. //'))
             non_error_files=""
@@ -179,7 +178,7 @@ jobs:
               ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
               ไฟล์และพาทที่มีข้อผิดพลาด:
-              ${{ steps.error_info.outputs.error_paths }}
+              ${{ steps.error_info.outputs.error_paths || 'ไม่พบข้อผิดพลาด' }}
               -------------------
               ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
               -------------------
