@@ -124,12 +124,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 2
-
       - name: Download Error Files
         uses: actions/download-artifact@v3
         with:
           name: error-files
-
       - name: Get Error Log and Changed Files Info
         id: error_info
         run: |
@@ -156,8 +154,6 @@ jobs:
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
 
-    # ส่วนอื่นๆ คงเดิม
-
       - name: Send email on failure
         env:
           ERROR_LOG: ${{ steps.error_info.outputs.error_log }}
@@ -174,15 +170,13 @@ jobs:
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
             ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
-
             ไฟล์และพาทที่มีข้อผิดพลาด: ${{ env.ERROR_PATHS }}
             -------------------
             ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ env.NON_ERROR_FILES }}
             -------------------
             ไฟล์ที่มีการแก้ไข: ${{ env.CHANGED_FILES }}
             -------------------
-            ข้อผิดพลาดทั้งหมด:
-            ${{ env.ERROR_LOG }}
+            ข้อผิดพลาดทั้งหมด: ${{ env.ERROR_LOG }}
           to: ${{ env.COMMIT_AUTHOR_EMAIL }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
