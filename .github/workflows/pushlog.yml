@@ -156,7 +156,35 @@ jobs:
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
 
+    # ส่วนอื่นๆ คงเดิม
 
+      - name: Send email on failure
+        env:
+          ERROR_LOG: ${{ steps.error_info.outputs.error_log }}
+          ERROR_PATHS: ${{ steps.error_info.outputs.error_paths }}
+          NON_ERROR_FILES: ${{ steps.error_info.outputs.non_error_files }}
+          CHANGED_FILES: ${{ steps.error_info.outputs.changed_files }}
+          COMMIT_AUTHOR_EMAIL: ${{ steps.error_info.outputs.commit_author_email }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
+          body: |
+            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+
+            ไฟล์และพาทที่มีข้อผิดพลาด: ${{ env.ERROR_PATHS }}
+            -------------------
+            ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ env.NON_ERROR_FILES }}
+            -------------------
+            ไฟล์ที่มีการแก้ไข: ${{ env.CHANGED_FILES }}
+            -------------------
+            ข้อผิดพลาดทั้งหมด:
+            ${{ env.ERROR_LOG }}
+          to: ${{ env.COMMIT_AUTHOR_EMAIL }}
+          from: ${{ secrets.GMAIL_USERNAME }}
 
   send_success_notification:
             name: Send Success Notification
