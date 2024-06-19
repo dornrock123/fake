@@ -133,13 +133,16 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-              error_log=$(sed 's/$/\n/' build_errors.log)
+              error_log=$(cat build_errors.log)
+              error_log="${error_log//'%'/'%25'}"
+              error_log="${error_log//$'\n'/'%0A'}"
+              error_log="${error_log//$'\r'/'%0D'}"
               echo "error_log<<EOF" >> $GITHUB_OUTPUT
               echo "$error_log" >> $GITHUB_OUTPUT
               echo "EOF" >> $GITHUB_OUTPUT
 
               commit_author_email=$(git log -1 --pretty=format:'%ae')
-              changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
+              changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
 
               error_files=$(grep -o '/.*' build_errors.log | tr '\n' ' ' | sed 's/ $//')
               echo "error_files=$error_files" >> $GITHUB_OUTPUT
