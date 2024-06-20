@@ -133,37 +133,37 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-              error_lines=$(grep -o 'error' build_errors.log | tr '\n' '%0A')
-              echo "error_lines<<EOF" >> $GITHUB_OUTPUT
-              echo "$error_lines" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
+            error_lines=$(grep -o 'error' build_errors.log | tr '\n' '%0A')
+            echo "error_lines<<EOF" >> $GITHUB_OUTPUT
+            echo "$error_lines" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
 
-              commit_author_email=$(git log -1 --pretty=format:'%ae')
-              changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
+            commit_author_email=$(git log -1 --pretty=format:'%ae')
+            changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
 
-              echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
-              echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+            echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
+            echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         env:
-            ERROR_LINES: ${{ steps.error_info.outputs.error_lines }}
+          ERROR_LINES: ${{ steps.error_info.outputs.error_lines }}
         uses: dawidd6/action-send-mail@v3
         with:
-            server_address: smtp.gmail.com
-            server_port: 587
-            username: ${{ secrets.GMAIL_USERNAME }}
-            password: ${{ secrets.GMAIL_APP_PASSWORD }}
-            subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
-            body: |
-              ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
+          body: |
+            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
 
-              บรรทัดที่มีคำว่า 'error':
-              ${{ env.ERROR_LINES }}
-              -------------------
-              ไฟล์ที่มีการแก้ไข:
-              ${{ steps.error_info.outputs.changed_files }}
-            to: ${{ steps.error_info.outputs.commit_author_email }}
-            from: ${{ secrets.GMAIL_USERNAME }}
+            บรรทัดที่มีคำว่า 'error':
+            ${{ env.ERROR_LINES }}
+            -------------------
+            ไฟล์ที่มีการแก้ไข:
+            ${{ steps.error_info.outputs.changed_files }}
+          to: ${{ steps.error_info.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
 
   send_success_notification:
             name: Send Success Notification
