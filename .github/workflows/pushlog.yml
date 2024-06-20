@@ -158,10 +158,6 @@ jobs:
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
             echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
 
-            # Create a temporary file for the error log
-            mkdir -p ./tmp
-            cp build_errors.log ./tmp/error_log.txt
-
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
@@ -184,7 +180,7 @@ jobs:
               ${{ steps.error_info.outputs.changed_files }}
             to: ${{ steps.error_info.outputs.commit_author_email }}
             from: ${{ secrets.GMAIL_USERNAME }}
-            attachments: ./tmp/error_log.txt
+            attachments: build_errors.log
 
   send_success_notification:
             name: Send Success Notification
