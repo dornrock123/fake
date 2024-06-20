@@ -141,24 +141,24 @@ jobs:
 
               error_files_array=($(echo "$error_paths" | tr ' ' '\n'))
               non_error_files=""
-              if [ ${#error_files_array[@]} -eq 0 ]; then
-                  non_error_files="ไม่มีข้อผิดพลาด"
-              else
-                  while read -r file; do
-                      is_error=0
-                      for error_file in "${error_files_array[@]}"; do
-                          if [ "$file" == "$error_file" ]; then
-                              is_error=1
-                              break
-                          fi
-                      done
-                      if [ $is_error -eq 0 ]; then
-                          non_error_files+="$file "
+              for file in $changed_files; do
+                  is_error=0
+                  for error_file in "${error_files_array[@]}"; do
+                      if [ "$file" == "$error_file" ]; then
+                          is_error=1
+                          break
                       fi
-                  done <<< "$changed_files"
-              fi
-              echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
+                  done
+                  if [ $is_error -eq 0 ]; then
+                      non_error_files+="$file "
+                  fi
+              done
 
+              if [ -z "$non_error_files" ]; then
+                  non_error_files="ไม่มีข้อผิดพลาด"
+              fi
+
+              echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
               echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
               echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
 
