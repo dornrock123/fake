@@ -43,28 +43,33 @@ jobs:
           npm run build 2> build_errors.log
           exit_code=$?
           echo "error_files_present=$([[ $exit_code -ne 0 ]])" >> $GITHUB_OUTPUT
+          exit $exit_code
 
       - name: Create Gist for Error Files
-        if: ${{ steps.build.outputs.error_files_present == 'true' }}
+        if: always()
         id: create_gist
         run: |
-          gist_response=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -X POST \
-            -d @- \
-            https://api.github.com/gists << EOF
-          {
-            "description": "Build error log",
-            "public": false,
-            "files": {
-              "build_errors.log": {
-                "content": "$(cat build_errors.log)"
+          if [[ "${{ steps.build.outputs.error_files_present }}" == "true" ]]; then
+            gist_response=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -X POST \
+              -d @- \
+              https://api.github.com/gists << EOF
+            {
+              "description": "Build error log",
+              "public": false,
+              "files": {
+                "build_errors.log": {
+                  "content": "$(cat build_errors.log)"
+                }
               }
             }
-          }
-          EOF
-          )
-          gist_url=$(echo "$gist_response" | jq -r '.html_url')
-          echo "gist_url=$gist_url" >> $GITHUB_OUTPUT
+            EOF
+            )
+            gist_url=$(echo "$gist_response" | jq -r '.html_url')
+            echo "gist_url=$gist_url" >> $GITHUB_OUTPUT
+          else
+            echo "gist_url=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Error Files as Artifact
         if: ${{ steps.build.outputs.error_files_present == 'true' || always() }}
@@ -158,7 +163,8 @@ jobs:
             echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
             echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
 
-            echo "gist_url=${{ steps.create_gist.outputs.gist_url }}" >> $GITHUB_OUTPUT
+            gist_url="${{ steps.create_gist.outputs.gist_url }}"
+            echo "gist_url=$gist_url" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
