@@ -141,7 +141,7 @@ jobs:
             commit_author_email=$(git log -1 --pretty=format:'%ae')
             changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' '\n')
 
-            error_paths=$(grep -o '/.*[а-яА-ЯёЁ].*error' build_errors.log | sed 's/:.*//' | tr '\n' ' ' | sed 's/ $//')
+            error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | tr '\n' ' ' | sed 's/ $//')
             echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
 
             error_files_array=($(echo "$error_paths" | tr ' ' '\n'))
@@ -177,7 +177,8 @@ jobs:
               ข้อผิดพลาด:
               ${{ steps.error_info.outputs.error_log }}
               -------------------
-              พาทที่มีข้อผิดพลาด: ${{ steps.error_info.outputs.error_paths }}
+              พาทของไฟล์ที่มีข้อผิดพลาด:
+              ${{ steps.error_info.outputs.error_paths }}
               -------------------
               ไฟล์และพาทที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
               -------------------
