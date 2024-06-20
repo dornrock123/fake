@@ -134,25 +134,24 @@ jobs:
         id: error_info
         run: |
               commit_author_email=$(git log -1 --pretty=format:'%ae')
-              changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
 
               error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
               echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
 
               error_files_array=($(echo "$error_paths" | tr ' ' '\n'))
               non_error_files=""
-              for file in $changed_files; do
-                  is_error=0
-                  for error_file in "${error_files_array[@]}"; do
-                      if [ "$file" == "$error_file" ]; then
-                          is_error=1
-                          break
+              for file in *; do
+                  if [ -f "$file" ]; then
+                      is_error=0
+                      for error_file in "${error_files_array[@]}"; do
+                          if [ "$file" == "$error_file" ]; then
+                              is_error=1
+                              break
+                          fi
+                      done
+                      if [ $is_error -eq 0 ]; then
+                          non_error_files+="$file "
                       fi
-                  done
-                  if [ $is_error -eq 1 ]; then
-                      continue
-                  else
-                      non_error_files+="$file "
                   fi
               done
 
@@ -160,6 +159,7 @@ jobs:
                   non_error_files="ไม่มีข้อผิดพลาด"
               fi
 
+              changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
               changed_files_text="ไฟล์ที่มีการแก้ไข: $changed_files"
 
               echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
