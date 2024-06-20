@@ -46,18 +46,18 @@ jobs:
           exit $exit_code
 
       - name: Create Gist for Error Files
-        if: always()
+        if: ${{ steps.build.outputs.error_files_present == 'true' }}
         id: create_gist
         run: |
-          if [[ "${{ steps.build.outputs.error_files_present }}" == "true" ]]; then
-            gist_response=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -X POST \
-              -d @- \
-              https://api.github.com/gists << EOF
+            gist_response=$(curl -X POST \
+                              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                              -H "Accept: application/vnd.github.v3+json" \
+                              https://api.github.com/gists \
+                              -d @- <<EOF
             {
               "description": "Build error log",
               "public": false,
-                "files": {
+              "files": {
                 "build_errors.log": {
                   "content": "$(cat build_errors.log)"
                 }
@@ -67,9 +67,7 @@ jobs:
             )
             gist_url=$(echo "$gist_response" | jq -r '.html_url')
             echo "gist_url=$gist_url" >> $GITHUB_ENV
-          else
-            echo "gist_url=" >> $GITHUB_ENV
-          fi
+
 
       - name: Upload Error Files as Artifact
         if: ${{ steps.build.outputs.error_files_present == 'true' || always() }}
