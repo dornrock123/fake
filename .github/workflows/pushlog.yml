@@ -154,15 +154,15 @@ jobs:
               fi
           done
 
-          echo "non_error_files value: $non_error_files"
+          echo "non_error_files value: '$non_error_files'"
 
           if [ -n "$non_error_files" ]; then
               echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           else
-              echo "non_error_files=ไม่มีไฟล์ที่ไม่มีข้อผิดพลาด" >> $GITHUB_OUTPUT
+              echo "non_error_files=No non-error files" >> $GITHUB_OUTPUT
           fi
 
-          changed_files_text="ไฟล์ที่มีการแก้ไข: $changed_files"
+          changed_files_text="Changed files: $changed_files"
 
           echo "changed_files_text=$changed_files_text" >> $GITHUB_OUTPUT
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
@@ -174,21 +174,22 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
+          subject: ${{ github.job }} job of ${{ github.repository }} failed
           body: |
-            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+            Message: The `build` job of ${{ github.repository }} failed.
 
-            รายละเอียดข้อผิดพลาดอยู่ในไฟล์แนบ
+            The error details are attached.
 
-            พาทของไฟล์ที่มีข้อผิดพลาด (ไม่ซ้ำ):
+            Paths of unique error files:
             ${{ steps.error_info.outputs.error_paths }}
 
-            ไฟล์ที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
+            Non-error files: ${{ steps.error_info.outputs.non_error_files }}
 
             ${{ steps.error_info.outputs.changed_files_text }}
           to: ${{ steps.error_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
+
 
   send_success_notification:
             name: Send Success Notification
