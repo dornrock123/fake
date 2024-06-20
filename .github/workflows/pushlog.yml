@@ -149,7 +149,9 @@ jobs:
                           break
                       fi
                   done
-                  if [ $is_error -eq 0 ]; then
+                  if [ $is_error -eq 1 ]; then
+                      continue
+                  else
                       non_error_files+="$file "
                   fi
               done
