@@ -139,11 +139,9 @@ jobs:
           error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
           echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
 
-          # ฟังก์ชันสำหรับตรวจสอบข้อผิดพลาดในไฟล์
+
           check_file_for_errors() {
             local file=$1
-            # ในที่นี้เราจะใช้การตรวจสอบอย่างง่ายว่าชื่อไฟล์ปรากฏในไฟล์ build_errors.log หรือไม่
-            # คุณอาจต้องปรับเปลี่ยนลอจิกนี้ให้เหมาะสมกับโปรเจคของคุณ
             grep -q "$file" build_errors.log
             return $?
           }
@@ -181,10 +179,10 @@ jobs:
 
             รายละเอียดข้อผิดพลาดอยู่ในไฟล์แนบ
 
-            พาทของไฟล์ที่มีข้อผิดพลาด (ไม่ซ้ำ):
+            ไฟล์ที่มีข้อผิดพลาด :
             ${{ steps.error_info.outputs.error_paths }}
 
-            ไฟล์ที่ไม่มีข้อผิดพลาด: ${{ steps.error_info.outputs.non_error_files }}
+            ไฟล์ที่แก้แล้ว complete]: ${{ steps.error_info.outputs.non_error_files }}
 
             ${{ steps.error_info.outputs.changed_files_text }}
           to: ${{ steps.error_info.outputs.commit_author_email }}
