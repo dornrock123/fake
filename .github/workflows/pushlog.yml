@@ -182,7 +182,7 @@ jobs:
             ไฟล์ที่มีข้อผิดพลาด :
             ${{ steps.error_info.outputs.error_paths }}
 
-            ไฟล์ที่แก้แล้ว complete]: ${{ steps.error_info.outputs.non_error_files }}
+            ไฟล์ที่แก้แล้ว complete: ${{ steps.error_info.outputs.non_error_files }}
 
             ${{ steps.error_info.outputs.changed_files_text }}
           to: ${{ steps.error_info.outputs.commit_author_email }}
