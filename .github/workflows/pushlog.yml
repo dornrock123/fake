@@ -223,15 +223,10 @@ jobs:
                   password: ${{ secrets.GMAIL_APP_PASSWORD }}
                   subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
                   body: |
-                     <html>
-                        <body>
-                          <h2>งาน `build` ของ ${{ github.repository }} สำเร็จ</h2>
-                          <p>commit successssssssssssss</p>
-                          <p>ไฟล์ที่ถูก commit และ push คือ:</p>
-                          <pre>${{ steps.commit_info.outputs.changed_files }}</pre>
-                          <img src="https://mpics.mgronline.com/pics/Images/556000013707201.JPEG" alt="Success Image" style="max-width: 100%;">
-                        </body>
-                        </html>
+                    งาน `build` ของ ${{ github.repository }}
+                    commit successssssssssssss
+                    ไฟล์ที่ถูก commit และ push คือ:
+                    ${{ steps.commit_info.outputs.changed_files }}
                   to: ${{ steps.commit_info.outputs.commit_author_email }}
                   from: ${{ secrets.GMAIL_USERNAME }}
-                  content_type: text/html
+
