@@ -189,6 +189,10 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
 
+      - name: Download image
+        run: |
+            curl -o image.jpg https://mpics.mgronline.com/pics/Images/556000013707201.JPEG
+            ls -l image.jpg
 
   send_success_notification:
             name: Send Success Notification
@@ -225,4 +229,4 @@ jobs:
                     ${{ steps.commit_info.outputs.changed_files }}
                   to: ${{ steps.commit_info.outputs.commit_author_email }}
                   from: ${{ secrets.GMAIL_USERNAME }}
-
+                  attachments: image.jpg
