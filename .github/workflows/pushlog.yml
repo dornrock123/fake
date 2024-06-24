@@ -225,4 +225,4 @@ jobs:
                     ${{ steps.commit_info.outputs.changed_files }}
                   to: ${{ steps.commit_info.outputs.commit_author_email }}
                   from: ${{ secrets.GMAIL_USERNAME }}
-                  attachments: https://mpics.mgronline.com/pics/Images/556000013707201.JPEG
+
