@@ -229,7 +229,7 @@ jobs:
                           <p>commit successssssssssssss</p>
                           <p>ไฟล์ที่ถูก commit และ push คือ:</p>
                           <pre>${{ steps.commit_info.outputs.changed_files }}</pre>
-                          <img src="https://example.com/path/to/your/image.jpg" alt="Success Image" style="max-width: 100%;">
+                          <img src="https://mpics.mgronline.com/pics/Images/556000013707201.JPEG" alt="Success Image" style="max-width: 100%;">
                         </body>
                         </html>
                   to: ${{ steps.commit_info.outputs.commit_author_email }}
