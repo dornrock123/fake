@@ -12,5 +12,5 @@ jobs:
     steps:
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "http://172.16.253.11:8080/job/dorn/build?token=${{ secrets.MY_JENKINS_TOKEN }}" \
-          --user "user:${{ secrets.JENKINS_API_TOKEN }}"
+          curl -X POST "http://your-jenkins-url.com:8080/job/dorn/build?token=${{ secrets.MY_JENKINS_TOKEN }}" \
+            --user "user:${{ secrets.JENKINS_API_TOKEN }}"
