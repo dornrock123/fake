@@ -4,13 +4,15 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  trigger_jenkins:
-    name: Trigger Jenkins Job
+  trigger-jenkins-job:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "http://localhost:8080/job/dorn/build?token=${{ secrets.MY_JENKINS_TOKEN }}" \
-            --user "user:${{ secrets.JENKINS_API_TOKEN }}"
+          curl -X POST " https://b77a-171-6-195-126.ngrok-free.app/job/dornny/build" \
+          --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6"
