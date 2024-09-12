@@ -1,4 +1,4 @@
-name: commitlog
+name: CI with Docker, Jenkins, and Notifications
 
 on:
   push:
@@ -84,37 +84,16 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Create New Branch with Commit Hash
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          git config user.name dornrock123
-          git config user.email krisd3214@gmail.com
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
-          git checkout -b $NEW_BRANCH_NAME
-          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
-
-  get_commit_author_email:
-    name: Get Commit Author Email
+  trigger_jenkins_job:
+    name: Trigger Jenkins Job
     runs-on: ubuntu-latest
-    outputs:
-      commit_author_email: ${{ steps.get_commit_info.outputs.commit_author_email }}
-      changed_files: ${{ steps.get_commit_info.outputs.changed_files }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+    needs: push_to_registry
 
-      - name: Get Commit Info
-        id: get_commit_info
+    steps:
+      - name: Trigger Jenkins Job
         run: |
-          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
-          echo "commit_author_email=${AUTHOR_EMAIL}" >> $GITHUB_OUTPUT
-          echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
+          curl -X POST "https://aa21-171-6-195-126.ngrok-free.app/job/dornny/build" \
+          --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6"
 
   send_failure_notification:
     name: Send Failure Notification
@@ -140,7 +119,6 @@ jobs:
 
           error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
           echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
-
 
           check_file_for_errors() {
             local file=$1
@@ -181,7 +159,7 @@ jobs:
 
             รายละเอียดข้อผิดพลาดอยู่ในไฟล์แนบ
 
-            ไฟล์ที่มีข้อผิดพลาด :
+            ไฟล์ที่มีข้อผิดพลาด:
             ${{ steps.error_info.outputs.error_paths }}
 
             ไฟล์ที่แก้แล้ว complete: ${{ steps.error_info.outputs.non_error_files }}
@@ -191,40 +169,38 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
 
-
   send_success_notification:
-            name: Send Success Notification
-            runs-on: ubuntu-latest
-            needs: [lint, build, push_to_registry]
-            if: ${{ always() }}
-            steps:
-              - name: Checkout Code
-                uses: actions/checkout@v3
-                with:
-                  fetch-depth: 2
+    name: Send Success Notification
+    runs-on: ubuntu-latest
+    needs: [lint, build, push_to_registry]
+    if: ${{ always() }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
-              - name: Get Commit Info
-                id: commit_info
-                run: |
-                  commit_author_email=$(git log -1 --pretty=format:'%ae')
-                  changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
-                  echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
-                  echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+      - name: Get Commit Info
+        id: commit_info
+        run: |
+          commit_author_email=$(git log -1 --pretty=format:'%ae')
+          changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
+          echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
+          echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
 
-              - name: Send email on success
-                if: ${{ needs.build.result == 'success' }}
-                uses: dawidd6/action-send-mail@v3
-                with:
-                  server_address: smtp.gmail.com
-                  server_port: 587
-                  username: ${{ secrets.GMAIL_USERNAME }}
-                  password: ${{ secrets.GMAIL_APP_PASSWORD }}
-                  subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
-                  body: |
-                    งาน `build` ของ ${{ github.repository }}
-                    commit successssssssssssss
-                    ไฟล์ที่ถูก commit และ push คือ:
-                    ${{ steps.commit_info.outputs.changed_files }}
-                  to: ${{ steps.commit_info.outputs.commit_author_email }}
-                  from: ${{ secrets.GMAIL_USERNAME }}
-
+      - name: Send email on success
+        if: ${{ needs.build.result == 'success' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
+          body: |
+            งาน `build` ของ ${{ github.repository }} สำเร็จ
+            commit successssssssssssss
+            ไฟล์ที่ถูก commit และ push คือ:
+            ${{ steps.commit_info.outputs.changed_files }}
+          to: ${{ steps.commit_info.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
