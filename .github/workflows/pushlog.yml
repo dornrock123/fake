@@ -92,7 +92,7 @@ jobs:
     steps:
       - name: Trigger Jenkins Job
         run: |
-          curl -X POST "https://aa21-171-6-195-126.ngrok-free.app/job/dornny/build" \
+          curl -X POST "https://dcaf-61-7-146-25.ngrok-free.app/job/dornny/build" \
           --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6"
 
   send_failure_notification:
