@@ -20,7 +20,7 @@ RUN npm run build -- --output-hashing=none > build.log 2>&1 || (cat build.log &&
 FROM nginx:alpine
 
 # คัดลอกไฟล์ build จากภาพ builder มายังโฟลเดอร์ที่เหมาะสมใน Nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist/* /usr/share/nginx/html
 
 # คัดลอกไฟล์ log ของการ build มาด้วย
 COPY --from=builder /app/build.log /usr/share/nginx/html/
