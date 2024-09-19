@@ -59,31 +59,12 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-              git config --global user.name "dornrock123"
-              git config --global user.email "krisd3214@gmail.com"
-
-                # ดึง commit message ของ commit ล่าสุดที่ไม่ใช่ merge และไม่ใช่ auto-generated message
-              COMMIT_MESSAGE=$(git log --no-merges -1 --pretty=format:%s | grep -v "^Merge\|^Create pull request")
-
-              if [ -z "$COMMIT_MESSAGE" ]; then
-                # ถ้าไม่พบ commit message ที่เหมาะสม, ให้ใช้ commit hash แทน
-                COMMIT_HASH=$(git rev-parse --short HEAD)
-                BRANCH_NAME="branch-${COMMIT_HASH}"
-              else
-                # แปลง commit message ให้เป็นชื่อ branch ที่ถูกต้อง
-                BRANCH_NAME=$(echo "$COMMIT_MESSAGE" | tr -cd '[:alnum:] -' | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/^[-]*//' | sed 's/[-]*$//' | cut -c -30)
-
-                # ถ้าชื่อ branch เป็นค่าว่างหลังจากทำความสะอาด ให้ใช้ชื่อ default
-                if [ -z "$BRANCH_NAME" ]; then
-                  BRANCH_NAME="new-branch-$(date +%Y%m%d-%H%M%S)"
-                fi
-              fi
-
-              echo "Creating new branch: $BRANCH_NAME"
-
-              # สร้าง branch ใหม่
-              git checkout -b "$BRANCH_NAME"
-              git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git "$BRANCH_NAME"
+          git config user.name dornrock123
+          git config user.email krisd3214@gmail.com
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
+          git checkout -b $NEW_BRANCH_NAME
+          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
 
 
