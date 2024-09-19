@@ -61,9 +61,31 @@ jobs:
         run: |
           git config user.name dornrock123
           git config user.email krisd3214@gmail.com
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
-          git checkout -b $NEW_BRANCH_NAME
+
+          # ค้นหา commit แรกที่มาจาก Visual Studio
+          FIRST_VS_COMMIT=$(git log --grep="Commit from Visual Studio" --reverse --format="%H" -n 1)
+
+          if [ -z "$FIRST_VS_COMMIT" ]; then
+            echo "No commit from Visual Studio found. Using the latest commit instead."
+            FIRST_VS_COMMIT=$(git log -1 --format="%H")
+          fi
+
+          # ดึง commit message ของ commit ที่เลือก
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B $FIRST_VS_COMMIT)
+
+          # สร้างชื่อ branch ใหม่
+          NEW_BRANCH_NAME="vs-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
+
+          # ตรวจสอบว่า branch มีอยู่แล้วหรือไม่
+          if git ls-remote --exit-code --heads origin $NEW_BRANCH_NAME; then
+            echo "Branch $NEW_BRANCH_NAME already exists. Adding timestamp to make it unique."
+            NEW_BRANCH_NAME="${NEW_BRANCH_NAME}-$(date +%Y%m%d%H%M%S)"
+          fi
+
+          echo "Creating new branch: $NEW_BRANCH_NAME"
+
+          # สร้างและ push branch ใหม่
+          git checkout -b $NEW_BRANCH_NAME $FIRST_VS_COMMIT
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
 
