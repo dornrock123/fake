@@ -54,6 +54,20 @@ jobs:
           name: error-files
           path: build_errors.log
 
+      - name: Create New Branch with Commit Hash
+        if: always()
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+           git config --global user.name "dornrock123"
+           git config --global user.email "krisd3214@gmail.com"
+
+           COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+           BRANCH_NAME=$(echo "$COMMIT_MESSAGE" | tr -cd '[:alnum:]-' | cut -c -30)
+
+           git checkout -b "$BRANCH_NAME"
+           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git "$BRANCH_NAME"
+
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
