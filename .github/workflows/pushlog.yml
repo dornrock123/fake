@@ -62,14 +62,20 @@ jobs:
               git config --global user.name "dornrock123"
               git config --global user.email "krisd3214@gmail.com"
 
-              # ดึง SHA ของ commit แรกที่ไม่ใช่ merge
-              FIRST_MANUAL_COMMIT=$(git rev-list --no-merges --max-parents=1 HEAD | tail -n 1)
+              # ดึง SHA ของ commit ล่าสุดที่ไม่ใช่ merge commit
+              LATEST_COMMIT=$(git log --no-merges -1 --format=%H)
 
-              # ดึง commit message ของ commit แรกที่ไม่ใช่ merge
-              FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $FIRST_MANUAL_COMMIT)
+              # ดึง commit message ของ commit ล่าสุดที่ไม่ใช่ merge
+              COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $LATEST_COMMIT)
 
               # แปลง commit message ให้เป็นชื่อ branch ที่ถูกต้อง
-              BRANCH_NAME=$(echo "$FIRST_COMMIT_MESSAGE" | tr -cd '[:alnum:]-' | cut -c -30)
+              # ลบอักขระพิเศษและเว้นวรรค แล้วจำกัดความยาวไม่เกิน 30 ตัวอักษร
+              BRANCH_NAME=$(echo "$COMMIT_MESSAGE" | tr -cd '[:alnum:]-' | tr '[:upper:]' '[:lower:]' | sed 's/^[-]*//' | sed 's/[-]*$//' | cut -c -30)
+
+              # ถ้าชื่อ branch เป็นค่าว่าง ให้ใช้ชื่อ default
+              if [ -z "$BRANCH_NAME" ]; then
+                BRANCH_NAME="new-branch-$(date +%Y%m%d-%H%M%S)"
+              fi
 
               # สร้าง branch ใหม่
               git checkout -b "$BRANCH_NAME"
