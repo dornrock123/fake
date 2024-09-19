@@ -62,7 +62,8 @@ jobs:
           git config --global user.name "dornrock123"
           git config --global user.email "krisd3214@gmail.com"
 
-          FIRST_COMMIT_MESSAGE=$(git log --no-merges --pretty=format:%s | tail -1)
+          FIRST_COMMIT_HASH=$(git rev-list --no-merges --max-parents=1 HEAD | tail -1)
+          FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $FIRST_COMMIT_HASH)
 
           if [ -z "$FIRST_COMMIT_MESSAGE" ]; then
             echo "No non-merge commits found. Using default branch name."
