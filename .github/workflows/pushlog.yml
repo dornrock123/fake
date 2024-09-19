@@ -62,7 +62,7 @@ jobs:
           git config user.name dornrock123
           git config user.email krisd3214@gmail.com
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" )"
+          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
