@@ -62,16 +62,22 @@ jobs:
           git config --global user.name "dornrock123"
           git config --global user.email "krisd3214@gmail.com"
 
-          FIRST_COMMIT_HASH=$(git rev-list --no-merges --max-parents=1 HEAD | tail -1)
-          FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $FIRST_COMMIT_HASH)
+          # ดึง commit แรกที่ไม่ใช่ merge commit โดยกรอง merge commit ออก
+          FIRST_NON_MERGE_COMMIT=$(git log --no-merges --format="%H" -n 1)
 
+          # ดึง commit message ของ commit แรกที่ไม่ใช่ merge
+          FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $FIRST_NON_MERGE_COMMIT)
+
+          # ตรวจสอบว่า FIRST_COMMIT_MESSAGE ไม่เป็นค่าว่าง
           if [ -z "$FIRST_COMMIT_MESSAGE" ]; then
             echo "No non-merge commits found. Using default branch name."
             FIRST_COMMIT_MESSAGE="default-branch-name"
           fi
 
+          # สร้างชื่อ branch โดยแปลง commit message ให้เป็นชื่อ branch ที่เหมาะสม
           BRANCH_NAME=$(echo "$FIRST_COMMIT_MESSAGE" | tr -cd '[:alnum:]-' | cut -c -30)
 
+          # ตรวจสอบว่า BRANCH_NAME ไม่เป็นค่าว่างอีกครั้ง
           if [ -z "$BRANCH_NAME" ]; then
             echo "Branch name is empty. Exiting."
             exit 1
