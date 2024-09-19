@@ -61,8 +61,28 @@ jobs:
         run: |
           git config user.name dornrock123
           git config user.email krisd3214@gmail.com
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
+
+          PR_TITLE=$(curl -s -H "Authorization: token $GH_PAT" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
+            jq -r '.[0].title')
+
+          if [ -z "$PR_TITLE" ] || [ "$PR_TITLE" = "null" ]; then
+            echo "No open pull request found. Using default branch name."
+            PR_TITLE="default-branch-name"
+          fi
+
+          # สร้างชื่อ branch ใหม่
+          NEW_BRANCH_NAME="pr-$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
+
+          # ตรวจสอบว่า branch มีอยู่แล้วหรือไม่
+          if git ls-remote --exit-code --heads origin $NEW_BRANCH_NAME; then
+            echo "Branch $NEW_BRANCH_NAME already exists. Adding timestamp to make it unique."
+            NEW_BRANCH_NAME="${NEW_BRANCH_NAME}-$(date +%Y%m%d%H%M%S)"
+          fi
+
+          echo "Creating new branch: $NEW_BRANCH_NAME"
+
+          # สร้างและ push branch ใหม่
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
