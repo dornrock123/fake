@@ -62,21 +62,23 @@ jobs:
               git config --global user.name "dornrock123"
               git config --global user.email "krisd3214@gmail.com"
 
-              # ดึง commit แรกที่ไม่ใช่ merge commit และกรอง pull request merge
+              # ดึง SHA ของ commit แรกที่ไม่ใช่ merge
               FIRST_MANUAL_COMMIT=$(git log --no-merges --format="%H" -n 1)
 
               # ดึง commit message ของ commit แรกที่ไม่ใช่ merge
-              FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=%s $FIRST_MANUAL_COMMIT)
+              FIRST_COMMIT_MESSAGE=$(git log -1 --pretty=format:%s $FIRST_MANUAL_COMMIT)
 
               # แปลง commit message ให้เป็นชื่อ branch ที่ถูกต้อง
               BRANCH_NAME=$(echo "$FIRST_COMMIT_MESSAGE" | tr -cd '[:alnum:]-' | cut -c -30)
 
-              # ตรวจสอบว่า BRANCH_NAME ไม่เป็นค่าว่าง
-              if [ -z "$BRANCH_NAME" ]; then
-                echo "Branch name is empty. Exiting."
+              # ตรวจสอบว่า branch มีอยู่แล้วหรือไม่
+              git fetch origin
+              if git show-ref --verify --quiet refs/heads/"$BRANCH_NAME"; then
+                echo "Branch already exists. Exiting."
                 exit 1
               fi
 
+              # สร้าง branch ใหม่
               git checkout -b "$BRANCH_NAME"
               git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git "$BRANCH_NAME"
 
