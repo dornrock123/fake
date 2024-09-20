@@ -232,7 +232,7 @@ jobs:
           body: |
             Build succeeded for commit: ${{ github.sha }}
 
-            Files changed: ${{ steps.commit_info.outputs.changed_files }}
+            Files changed: ${{ steps.error_info.outputs.non_error_files }}
 
           to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
