@@ -48,7 +48,7 @@ jobs:
           echo "error_files_present=$([[ $exit_code -ne 0 ]])" >> $GITHUB_OUTPUT
 
       - name: Upload Error Files
-        if: ${{ steps.build.outputs.error_files_present == 'true' || always()}}
+        if: ${{ steps.build.outputs.error_files_present == 'true' || always() }}
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -71,10 +71,8 @@ jobs:
             PR_TITLE="default-branch-name"
           fi
 
-          # สร้างชื่อ branch ใหม่
-          NEW_BRANCH_NAME="pr-$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
+          NEW_BRANCH_NAME="log-$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
 
-          # ตรวจสอบว่า branch มีอยู่แล้วหรือไม่
           if git ls-remote --exit-code --heads origin $NEW_BRANCH_NAME; then
             echo "Branch $NEW_BRANCH_NAME already exists. Adding timestamp to make it unique."
             NEW_BRANCH_NAME="${NEW_BRANCH_NAME}-$(date +%Y%m%d%H%M%S)"
@@ -82,11 +80,8 @@ jobs:
 
           echo "Creating new branch: $NEW_BRANCH_NAME"
 
-          # สร้างและ push branch ใหม่
           git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
-
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -94,7 +89,6 @@ jobs:
     needs: build
 
     steps:
-
       - name: Check out the repo
         uses: actions/checkout@v3
 
