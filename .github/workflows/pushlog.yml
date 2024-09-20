@@ -54,26 +54,6 @@ jobs:
           name: error-files
           path: build_errors.log
 
-      - name: Get latest commit message
-        id: get_commit_message
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          IS_MERGE=$(git log -1 --pretty=%P | wc -w)
-          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_ENV
-          echo "is_merge=$IS_MERGE" >> $GITHUB_ENV
-
-      - name: Skip branch creation if merge commit
-        if: env.is_merge == '1'
-        run: echo "Skip branch creation due to merge commit."
-
-      - name: Create new branch if not a merge commit
-        if: env.is_merge != '1'
-        run: |
-          NEW_BRANCH=${{ env.commit_message }}
-          NEW_BRANCH=$(echo "$NEW_BRANCH" | tr '[:space:]' '-' | tr -cd '[:alnum:]-')
-          git checkout -b "$NEW_BRANCH"
-          git push origin "$NEW_BRANCH"
-
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
@@ -102,6 +82,17 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create New Branch with Commit Hash
+        env:
+           GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+            git config user.name dornrock123
+            git config user.email krisd3214@gmail.com
+            COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+            NEW_BRANCH_NAME="log-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr '[:space:]' '-' | tr '[:punct:]' '-')"
+            git checkout -b $NEW_BRANCH_NAME
+            git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
 
   trigger_jenkins_job:
     name: Trigger Jenkins Job
