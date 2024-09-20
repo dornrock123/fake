@@ -83,7 +83,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Create New Branch with Commit Message
+      - name: Create New branch with Commit Message
         env:
              GH_PAT: ${{ secrets.GH_PAT }}
         run: |
