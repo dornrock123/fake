@@ -48,7 +48,7 @@ jobs:
           echo "error_files_present=$([[ $exit_code -ne 0 ]])" >> $GITHUB_OUTPUT
 
       - name: Upload Error Files
-        if: ${{ steps.build.outputs.error_files_present == 'true' || always()}}
+        if: ${{ steps.build.outputs.error_files_present == 'true' || always() }}
         uses: actions/upload-artifact@v3
         with:
           name: error-files
@@ -62,21 +62,17 @@ jobs:
           git config user.name dornrock123
           git config user.email krisd3214@gmail.com
 
-          # ค้นหา commit แรกที่มาจาก Visual Studio
-          FIRST_VS_COMMIT=$(git log --grep="Commit from Visual Studio" --reverse --format="%H" -n 1)
+          PR_TITLE=$(curl -s -H "Authorization: token $GH_PAT" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
+            jq -r '.[0].title')
 
-          if [ -z "$FIRST_VS_COMMIT" ]; then
-            echo "No commit from Visual Studio found. Using the latest commit instead."
-            FIRST_VS_COMMIT=$(git log -1 --format="%H")
+          if [ -z "$PR_TITLE" ] || [ "$PR_TITLE" = "null" ]; then
+            echo "No open pull request found. Using default branch name."
+            PR_TITLE="default-branch-name"
           fi
 
-          # ดึง commit message ของ commit ที่เลือก
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B $FIRST_VS_COMMIT)
+          NEW_BRANCH_NAME="log-$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
 
-          # สร้างชื่อ branch ใหม่
-          NEW_BRANCH_NAME="vs-$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
-
-          # ตรวจสอบว่า branch มีอยู่แล้วหรือไม่
           if git ls-remote --exit-code --heads origin $NEW_BRANCH_NAME; then
             echo "Branch $NEW_BRANCH_NAME already exists. Adding timestamp to make it unique."
             NEW_BRANCH_NAME="${NEW_BRANCH_NAME}-$(date +%Y%m%d%H%M%S)"
@@ -84,11 +80,8 @@ jobs:
 
           echo "Creating new branch: $NEW_BRANCH_NAME"
 
-          # สร้างและ push branch ใหม่
-          git checkout -b $NEW_BRANCH_NAME $FIRST_VS_COMMIT
+          git checkout -b $NEW_BRANCH_NAME
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
-
 
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -96,7 +89,6 @@ jobs:
     needs: build
 
     steps:
-
       - name: Check out the repo
         uses: actions/checkout@v3
 
