@@ -161,10 +161,6 @@ jobs:
             COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%b | grep -oP '(?<=Signed-off-by: ).*(?= <)')
           fi
 
-          if [[ -z "$COMMIT_AUTHOR_EMAIL" || "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
-            COMMIT_AUTHOR_EMAIL="krisd3214@gmail.com"
-          fi
-
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
 
           error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
@@ -219,10 +215,6 @@ jobs:
 
           if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
             COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%b' | grep -oP '(?<=Signed-off-by: ).*(?= <)')
-          fi
-
-          if [[ -z "$COMMIT_AUTHOR_EMAIL" || "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
-            COMMIT_AUTHOR_EMAIL="krisd3214@gmail.com"
           fi
 
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
