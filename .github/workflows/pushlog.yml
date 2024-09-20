@@ -95,7 +95,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
 
-      - name: Create New Branch with Commit Messge
+      - name: Create New Branch with Commit Message
         env:
            GH_PAT: ${{ secrets.GH_PAT }}
         run: |
