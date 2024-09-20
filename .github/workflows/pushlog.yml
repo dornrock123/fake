@@ -86,6 +86,7 @@ jobs:
   create_log_branch:
     name: Create Log Branch
     runs-on: ubuntu-latest
+    # Only run this job on pushes to main, not on pull requests
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, build, push_to_registry]
 
@@ -93,7 +94,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Create New Branch with Commit Message
         env:
@@ -102,18 +103,24 @@ jobs:
             git config user.name dornrock123
             git config user.email krisd3214@gmail.com
 
+            # Get the latest commit on main (which should be the merge commit)
             FULL_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
 
+            # Extract meaningful information from the commit message
             if [[ $FULL_COMMIT_MESSAGE == Merge\ pull\ request* ]]; then
+              # For merged PRs, use PR number and title
               PR_NUM=$(echo "$FULL_COMMIT_MESSAGE" | grep -oP '#\K\d+')
               PR_TITLE=$(git log -1 --pretty=%B | sed -n '5p' | cut -c1-50)
               COMMIT_MESSAGE="pr-${PR_NUM}-${PR_TITLE}"
             else
+              # For direct pushes to main, use the commit message
               COMMIT_MESSAGE=$(echo "$FULL_COMMIT_MESSAGE" | head -n 1)
             fi
 
+            # Sanitize the message
             SANITIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)
 
+            # Create branch name
             NEW_BRANCH_NAME="log-${SANITIZED_MESSAGE}"
 
             git checkout -b $NEW_BRANCH_NAME
@@ -138,6 +145,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history
 
       - name: Download Error Files
         uses: actions/download-artifact@v3
@@ -147,15 +156,7 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-          if [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
-            # Get the PR author's email
-            PR_AUTHOR=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")
-            commit_author_email=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/users/$PR_AUTHOR" | jq -r .email)
-          else
-            commit_author_email=$(git log -1 --pretty=format:'%ae')
-          fi
-
+          commit_author_email=$(git log -1 --pretty=format:'%ae')
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
 
           error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
@@ -200,18 +201,13 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history
 
       - name: Get Commit Info
         id: commit_info
         run: |
-          if [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
-            PR_AUTHOR=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")
-            commit_author_email=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/users/$PR_AUTHOR" | jq -r .email)
-          else
-            commit_author_email=$(git log -1 --pretty=format:'%ae')
-          fi
-
+          commit_author_email=$(git log -1 --pretty=format:'%ae')
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "commit_author_email=$commit_author_email" >> $GITHUB_OUTPUT
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
@@ -231,3 +227,4 @@ jobs:
 
           to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
