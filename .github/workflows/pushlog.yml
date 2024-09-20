@@ -54,7 +54,7 @@ jobs:
           name: error-files
           path: build_errors.log
 
-      - name: Get latest commit message
+      - name: Get latest commit messa
         id: get_commit_message
         run: |
             COMMIT_MESSAGE=$(git log -1 --pretty=%B)
