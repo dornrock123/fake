@@ -54,34 +54,26 @@ jobs:
           name: error-files
           path: build_errors.log
 
-      - name: Create New Branch with Commit Hash
-        if: always()
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+      - name: Get latest commit message
+        id: get_commit_message
         run: |
-          git config user.name dornrock123
-          git config user.email krisd3214@gmail.com
+            COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+            IS_MERGE=$(git log -1 --pretty=%P | wc -w)
+            echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_ENV
+            echo "is_merge=$IS_MERGE" >> $GITHUB_ENV
 
-          PR_TITLE=$(curl -s -H "Authorization: token $GH_PAT" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
-            jq -r '.[0].title')
+      - name: Skip branch creation if merge commit
+        if: env.is_merge == '1'
+        run: echo "Skip branch creation due to merge commit."
 
-          if [ -z "$PR_TITLE" ] || [ "$PR_TITLE" = "null" ]; then
-            echo "No open pull request found. Using default branch name."
-            PR_TITLE="default-branch-name"
-          fi
-
-          NEW_BRANCH_NAME="log-$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
-
-          if git ls-remote --exit-code --heads origin $NEW_BRANCH_NAME; then
-            echo "Branch $NEW_BRANCH_NAME already exists. Adding timestamp to make it unique."
-            NEW_BRANCH_NAME="${NEW_BRANCH_NAME}-$(date +%Y%m%d%H%M%S)"
-          fi
-
-          echo "Creating new branch: $NEW_BRANCH_NAME"
-
-          git checkout -b $NEW_BRANCH_NAME
-          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
+      - name: Create new branch if not a merge commit
+        if: env.is_merge != '1'
+        run: |
+            NEW_BRANCH=${{ env.commit_message }}
+            # Replace any invalid characters in the branch name (e.g., spaces)
+            NEW_BRANCH=$(echo "$NEW_BRANCH" | tr '[:space:]' '-' | tr -cd '[:alnum:]-')
+            git checkout -b "$NEW_BRANCH"
+            git push origin "$NEW_BRANCH"
 
   push_to_registry:
     name: Push Docker image to Docker Hub
