@@ -136,7 +136,6 @@ jobs:
           echo "Triggering Jenkins job..."
           response=$(curl -X POST "https://2a7c-61-7-146-25.ngrok-free.app/job/dornny/build" \
           --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
-          echo "Response from Jenkins: $response"
 
       - name: Wait for Jenkins Job to Complete
         run: |
