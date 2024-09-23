@@ -130,10 +130,25 @@ jobs:
     needs: push_to_registry
 
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Trigger Jenkins Job
+        id: trigger_jenkins
         run: |
-          curl -X POST "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/build" \
-          --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6"
+          response=$(curl -X POST "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/build" \
+          --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
+          echo "Triggered Jenkins Job"
+
+      - name: Wait for Jenkins Job to Complete
+        run: |
+          job_status="null"
+          while [ "$job_status" != "SUCCESS" ]; do
+            sleep 10
+            job_status=$(curl -s "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/lastBuild/api/json" \
+              --user "dornrock:1147d17fc8ec8e23ed131270370370d186bf6" | jq -r '.result')
+            echo "Current Job Status: $job_status"
+          done
 
   send_failure_notification:
     name: Send Failure Notification
