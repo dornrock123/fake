@@ -1,5 +1,9 @@
 name: CI with Docker, Jenkins, and Notifications
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -247,7 +251,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Build Success for ${{ github.repository }}"
+          subject: "Build success for ${{ github.repository }}"
           body: |
             Build succeeded for commit: ${{ github.sha }}
 
