@@ -83,32 +83,73 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  trigger_and_wait_jenkins:
+    name: Trigger Jenkins Job and Wait
+    runs-on: ubuntu-latest
+    needs: push_to_registry
+
+    steps:
+      - name: Trigger Jenkins Job
+        id: trigger_jenkins
+        run: |
+          QUEUE_URL=$(curl -s -X POST "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/buildWithParameters" \
+            --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6" \
+            --data-urlencode "GITHUB_SHA=${{ github.sha }}" \
+            --data-urlencode "DOCKER_IMAGE=krisneonploy/dockerbuild:${{ github.sha }}" \
+            -D - | grep -i location | cut -d' ' -f2 | tr -d '\r')
+          echo "queue_url=$QUEUE_URL" >> $GITHUB_OUTPUT
+
+      - name: Wait for Jenkins Job to Complete
+        run: |
+          QUEUE_URL="${{ steps.trigger_jenkins.outputs.queue_url }}"
+          echo "Waiting for Jenkins job to start..."
+          while true; do
+            BUILD_URL=$(curl -s -u "dornrock:1147d17fc8ec8e23ed131270370d186bf6" "${QUEUE_URL}api/json" | jq -r '.executable.url')
+            if [ "${BUILD_URL}" != "null" ]; then
+              break
+            fi
+            sleep 5
+          done
+          echo "Jenkins job started. Build URL: ${BUILD_URL}"
+
+          echo "Waiting for Jenkins job to complete..."
+          while true; do
+            BUILD_RESULT=$(curl -s -u "dornrock:1147d17fc8ec8e23ed131270370d186bf6" "${BUILD_URL}api/json" | jq -r '.result')
+            if [ "${BUILD_RESULT}" = "SUCCESS" ]; then
+              echo "Jenkins job completed successfully"
+              exit 0
+            elif [ "${BUILD_RESULT}" = "FAILURE" ]; then
+              echo "Jenkins job failed"
+              exit 1
+            elif [ "${BUILD_RESULT}" = "ABORTED" ]; then
+              echo "Jenkins job was aborted"
+              exit 1
+            fi
+            echo "Jenkins job is still running. Waiting..."
+            sleep 10
+          done
+
   create_log_branch:
     name: Create Log Branch
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, build, push_to_registry]
+    needs: trigger_and_wait_jenkins
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0
 
       - name: Create New Branch with Commit Message
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-            # Get the author information from the latest commit
             COMMIT_AUTHOR_NAME=$(git log -1 --pretty=%an)
             COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae)
-
-            # Set the git config to use the author's info
             git config user.name "$COMMIT_AUTHOR_NAME"
             git config user.email "$COMMIT_AUTHOR_EMAIL"
-
             FULL_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-
             if [[ $FULL_COMMIT_MESSAGE == Merge\ pull\ request* ]]; then
               PR_NUM=$(echo "$FULL_COMMIT_MESSAGE" | grep -oP '#\K\d+')
               PR_TITLE=$(git log -1 --pretty=%B | sed -n '5p' | cut -c1-50)
@@ -116,35 +157,21 @@ jobs:
             else
               COMMIT_MESSAGE=$(echo "$FULL_COMMIT_MESSAGE" | head -n 1)
             fi
-
             SANITIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)
-
             NEW_BRANCH_NAME="log-${SANITIZED_MESSAGE}"
-
             git checkout -b $NEW_BRANCH_NAME
             git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
-  trigger_jenkins_job:
-    name: Trigger Jenkins Job
-    runs-on: ubuntu-latest
-    needs: push_to_registry
-
-    steps:
-      - name: Trigger Jenkins Job
-        run: |
-          curl -X POST "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/build" \
-          --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6"
 
   send_failure_notification:
     name: Send Failure Notification
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, trigger_and_wait_jenkins]
     if: ${{ failure() }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history
+          fetch-depth: 0
 
       - name: Download Error Files
         uses: actions/download-artifact@v3
@@ -154,25 +181,19 @@ jobs:
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-          # Get the author information from the latest commit
           COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae)
-
           if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
             COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%b | grep -oP '(?<=Signed-off-by: ).*(?= <)')
           fi
-
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
-
           error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
           echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
-
           non_error_files=""
           for file in $changed_files; do
             if ! grep -q "$file" build_errors.log; then
               non_error_files+="$file "
             fi
           done
-
           echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
 
@@ -183,14 +204,16 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Build failure for ${{ github.repository }}"
+          subject: "Build or Deployment failure for ${{ github.repository }}"
           body: |
-            Build failed for commit: ${{ github.sha }}
+            Build or Deployment failed for commit: ${{ github.sha }}
 
             Files with errors:
             ${{ steps.error_info.outputs.error_paths }}
 
             Files changed: ${{ steps.error_info.outputs.non_error_files }}
+
+            Please check the GitHub Actions and Jenkins logs for more details.
 
           to: ${{ steps.error_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
@@ -199,24 +222,21 @@ jobs:
   send_success_notification:
     name: Send Success Notification
     runs-on: ubuntu-latest
-    needs: [lint, build, push_to_registry]
+    needs: [lint, build, push_to_registry, trigger_and_wait_jenkins]
     if: ${{ success() }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history
+          fetch-depth: 0
 
       - name: Get Commit Info
         id: commit_info
         run: |
-          # Get the author information from the latest commit
           COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%ae')
-
           if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
             COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%b' | grep -oP '(?<=Signed-off-by: ).*(?= <)')
           fi
-
           changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
           echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
           echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
@@ -228,11 +248,13 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Build Success for ${{ github.repository }}"
+          subject: "Build and Deployment Success for ${{ github.repository }}"
           body: |
-            Build succeeded for commit: ${{ github.sha }}
+            Build and Deployment succeeded for commit: ${{ github.sha }}
 
             Files changed: ${{ steps.commit_info.outputs.changed_files }}
+
+            The changes have been successfully built, tested, and deployed.
 
           to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
