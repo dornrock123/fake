@@ -141,7 +141,7 @@ jobs:
       - name: Trigger Jenkins Job
         id: trigger_jenkins
         run: |
-          response=$(curl -X POST "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/build" \
+          response=$(curl -X POST "https://2688-61-7-146-25.ngrok-free.app/job/dornny/build" \
           --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
           echo "Triggered Jenkins Job"
 
@@ -150,7 +150,7 @@ jobs:
             job_status="null"
             while [ "$job_status" != "SUCCESS" ]; do
               sleep 10
-              response=$(curl -s "https://4be9-61-7-146-25.ngrok-free.app/job/dornny/lastBuild/api/json" \
+              response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/lastBuild/api/json" \
                 --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
               echo "Response: $response"  # เพิ่มการพิมพ์ผลลัพธ์
 
