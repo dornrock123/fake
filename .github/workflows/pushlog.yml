@@ -147,16 +147,24 @@ jobs:
 
       - name: Wait for Jenkins Job to Complete
         run: |
-              job_status="null"
-              while [ "$job_status" != "SUCCESS" ]; do
-                sleep 10
-                response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/build/api/json" \
-                  --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
-                echo "Response: $response"
+            job_status="null"
+            while [ "$job_status" != "SUCCESS" ]; do
+              sleep 15
+              response=$(curl -s -o response.html -w "%{http_code}" "https://2688-61-7-146-25.ngrok-free.app/job/dornny/build/api/json" \
+                --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
+              echo "HTTP Response Code: $response"
 
-                job_status=$(echo "$response" | jq -r '.result')
-                echo "Current Job Status: $job_status"
-              done
+              # Check if response code is 200 (OK)
+              if [ "$response" -ne 200 ]; then
+                echo "Error fetching Jenkins job status. HTTP Response Code: $response"
+                cat response.html  # Print the HTML response to debug
+                exit 1
+              fi
+
+              job_status=$(jq -r '.result' response.html)
+              echo "Current Job Status: $job_status"
+            done
+
   send_failure_notification:
     name: Send Failure Notification
     runs-on: ubuntu-latest
