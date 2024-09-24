@@ -149,7 +149,7 @@ jobs:
         run: |
             job_status="null"
             while [ "$job_status" != "SUCCESS" ]; do
-              sleep 10
+              sleep 15
               response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/lastBuild/api/json" \
                 --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
               echo "Response: $response"  # เพิ่มการพิมพ์ผลลัพธ์
