@@ -159,6 +159,11 @@ jobs:
 
               # ตรวจสอบว่า response เป็น JSON หรือไม่
               if echo "$response" | jq empty > /dev/null 2>&1; then
+                # พิมพ์ข้อมูล JSON ทั้งหมด
+                echo "Parsed JSON:"
+                echo "$response" | jq .
+
+                # ค้นหาค่า result ใน JSON
                 job_status=$(echo "$response" | jq -r '.result')
                 echo "Current Job Status: $job_status"
               else
@@ -172,6 +177,7 @@ jobs:
                 exit 1
               fi
             done
+
 
 
   send_failure_notification:
