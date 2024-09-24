@@ -145,35 +145,38 @@ jobs:
           --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
           echo "Triggered Jenkins Job"
 
-      - name: Wait for Jenkins Job to Complete
-        run: |
-            job_status="null"
-            while [ "$job_status" != "SUCCESS" ]; do
-              sleep 15
+          - name: Wait for Jenkins Job to Complete
+          run: |
+              job_status="null"
+              while [ "$job_status" != "SUCCESS" ]; do
+                sleep 15
 
-              # Fetch the response from Jenkins API
-              response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/lastBuild/api/json" \
-                --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
+                # Fetch the response from Jenkins API
+                response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/lastBuild/api/json" \
+                  --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
 
-              echo "Raw Response: $response"  # พิมพ์ response เพื่อตรวจสอบ
+                echo "Raw Response: $response"  # พิมพ์ response เพื่อตรวจสอบ
 
-              # ตรวจสอบว่า response เป็น JSON หรือไม่
-              if echo "$response" | jq empty > /dev/null 2>&1; then
-                job_status=$(echo "$response" | jq -r '.result')
-                echo "Current Job Status: $job_status"
-              else
-                echo "Error: Response is not valid JSON"
-                echo "$response"  # พิมพ์ response ที่ไม่เป็น JSON
-              fi
+                # ตรวจสอบว่า response เป็น JSON หรือไม่
+                if echo "$response" | jq empty > /dev/null 2>&1; then
+                  # พิมพ์ข้อมูล JSON ทั้งหมด
+                  echo "Parsed JSON:"
+                  echo "$response" | jq .
 
-              # ออกจากลูปหากสถานะไม่ใช่ SUCCESS หรือ FAIL
-              if [ "$job_status" == "FAILURE" ]; then
-                echo "Job failed."
-                exit 1
-              fi
-            done
+                  # ค้นหาค่า result ใน JSON
+                  job_status=$(echo "$response" | jq -r '.result')
+                  echo "Current Job Status: $job_status"
+                else
+                  echo "Error: Response is not valid JSON"
+                  echo "$response"  # พิมพ์ response ที่ไม่เป็น JSON
+                fi
 
-
+                # ออกจากลูปหากสถานะไม่ใช่ SUCCESS หรือ FAIL
+                if [ "$job_status" == "FAILURE" ]; then
+                  echo "Job failed."
+                  exit 1
+                fi
+              done
   send_failure_notification:
     name: Send Failure Notification
     runs-on: ubuntu-latest
