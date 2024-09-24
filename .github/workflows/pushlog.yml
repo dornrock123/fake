@@ -145,37 +145,17 @@ jobs:
           --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
           echo "Triggered Jenkins Job"
 
-          - name: Wait for Jenkins Job to Complete
-          run: |
+      - name: Wait for Jenkins Job to Complete
+        run: |
               job_status="null"
               while [ "$job_status" != "SUCCESS" ]; do
-                sleep 15
-
-                # Fetch the response from Jenkins API
+                sleep 10
                 response=$(curl -s "https://2688-61-7-146-25.ngrok-free.app/lastBuild/api/json" \
                   --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
+                echo "Response: $response"
 
-                echo "Raw Response: $response"  # พิมพ์ response เพื่อตรวจสอบ
-
-                # ตรวจสอบว่า response เป็น JSON หรือไม่
-                if echo "$response" | jq empty > /dev/null 2>&1; then
-                  # พิมพ์ข้อมูล JSON ทั้งหมด
-                  echo "Parsed JSON:"
-                  echo "$response" | jq .
-
-                  # ค้นหาค่า result ใน JSON
-                  job_status=$(echo "$response" | jq -r '.result')
-                  echo "Current Job Status: $job_status"
-                else
-                  echo "Error: Response is not valid JSON"
-                  echo "$response"  # พิมพ์ response ที่ไม่เป็น JSON
-                fi
-
-                # ออกจากลูปหากสถานะไม่ใช่ SUCCESS หรือ FAIL
-                if [ "$job_status" == "FAILURE" ]; then
-                  echo "Job failed."
-                  exit 1
-                fi
+                job_status=$(echo "$response" | jq -r '.result')
+                echo "Current Job Status: $job_status"
               done
   send_failure_notification:
     name: Send Failure Notification
