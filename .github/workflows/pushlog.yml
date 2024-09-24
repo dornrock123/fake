@@ -148,22 +148,50 @@ jobs:
       - name: Wait for Jenkins Job to Complete
         run: |
             job_status="null"
-            while [ "$job_status" != "SUCCESS" ]; do
+            max_attempts=20
+            attempt=0
+            while [ "$job_status" != "SUCCESS" ] && [ $attempt -lt $max_attempts ]; do
               sleep 15
-              response=$(curl -s -o response.html -w "%{http_code}" "https://2688-61-7-146-25.ngrok-free.app/job/dornny/build/api/json" \
+              attempt=$((attempt+1))
+              response=$(curl -s -w "%{http_code}" "https://2688-61-7-146-25.ngrok-free.app/job/dornny/lastBuild/api/json" \
                 --user "dornrock:1147d17fc8ec8e23ed131270370d186bf6")
-              echo "HTTP Response Code: $response"
+              http_code=${response: -3}
+              body=${response:0:${#response}-3}
 
-              # Check if response code is 200 (OK)
-              if [ "$response" -ne 200 ]; then
-                echo "Error fetching Jenkins job status. HTTP Response Code: $response"
-                cat response.html  # Print the HTML response to debug
-                exit 1
+              echo "HTTP Response Code: $http_code"
+
+              if [ "$http_code" -ne 200 ]; then
+                echo "Error fetching Jenkins job status. HTTP Response Code: $http_code"
+                echo "Response body: $body"
+                if [ $attempt -eq $max_attempts ]; then
+                  echo "Max attempts reached. Exiting."
+                  exit 1
+                fi
+                continue
               fi
 
-              job_status=$(jq -r '.result' response.html)
+              if ! job_status=$(echo "$body" | jq -r '.result'); then
+                echo "Error parsing JSON response. Raw response:"
+                echo "$body"
+                if [ $attempt -eq $max_attempts ]; then
+                  echo "Max attempts reached. Exiting."
+                  exit 1
+                fi
+                continue
+              fi
+
               echo "Current Job Status: $job_status"
+
+              if [ "$job_status" = "FAILURE" ]; then
+                echo "Jenkins job failed. Exiting."
+                exit 1
+              fi
             done
+
+            if [ $attempt -eq $max_attempts ]; then
+              echo "Max attempts reached. Job did not complete successfully."
+              exit 1
+            fi
 
   send_failure_notification:
     name: Send Failure Notification
