@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  lint:
-    name: Lint Code Base
+  build-and-test:
+    name: Build, Test, and Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,14 +21,6 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-
-  build:
-    name: Build Project
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -53,12 +45,6 @@ jobs:
           name: error-files
           path: build_errors.log
 
-            # Run API Job
-  run-api:
-    name: Run API
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
       - name: Checkout API repository
         uses: actions/checkout@v3
         with:
@@ -77,13 +63,6 @@ jobs:
           mvn clean install
           nohup mvn spring-boot:run > /dev/null 2>&1 &
 
-  # Run Web and Playwright Tests Job
-  run-web-and-test:
-    name: Run Web and Playwright Tests
-    runs-on: ubuntu-latest
-    needs: run-api
-
-    steps:
       - name: Checkout Web repository
         uses: actions/checkout@v3
         with:
@@ -91,15 +70,10 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           ref: ${{ github.event.inputs.web_branch || 'main' }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16.20.2"
-
       - name: Set npm registry
         run: npm config set registry https://registry.npmjs.org/
 
-      - name: Install dependencies
+      - name: Install Web dependencies
         run: npm install --force
 
       - name: Start the app
@@ -123,10 +97,27 @@ jobs:
             echo "Tests passed."
           fi
 
+      - name: Build ZAP Docker Image
+        run: |
+          docker pull lefisius/dockerbuild:main
+          docker run -d --name zap -p 8080:8080 lefisius/dockerbuild:main
+
+      - name: Run ZAP Scan
+        run: |
+          docker exec zap zap-baseline.py -t http://localhost:4200/ -r zap_report.html
+        env:
+          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: zap_report.html
+
   push_to_registry:
     name: Push Docker image to Docker Hub
+    needs: build-and-test
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -152,45 +143,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  zap_scan:
-    name: Run ZAP Scan
-    runs-on: ubuntu-latest
-    needs: push_to_registry
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: List files to verify dockerfile location
-        run: |
-          ls -la
-          ls -la dockerfile
-
-      - name: Build ZAP Docker Image
-        run: |
-          docker pull lefisius/dockerbuild:main
-          docker run -d --name zap -p 8080:8080 lefisius/dockerbuild:main
-
-      - name: Run ZAP Container
-        run: |
-          docker run -d --name zap -p 8080:8080 zap-scan-image
-          sleep 60
-
-      - name: Start ZAP Scan
-        run: |
-          docker exec zap zap-baseline.py -t http://localhost:4200/ -r zap_report.html
-        env:
-          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
-
-      - name: Upload ZAP Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: zap-report
-          path: zap_report.html
-
   trigger_jenkins:
     name: Trigger Jenkins Job
+    needs: push_to_registry
     runs-on: ubuntu-latest
-    needs: zap_scan
     steps:
       - name: Trigger Jenkins Job
         run: |
@@ -220,7 +176,7 @@ jobs:
   send_failure_notification:
     name: Send Failure Notification
     runs-on: ubuntu-latest
-    needs: [ lint, build, push_to_registry, zap_scan, trigger_jenkins]
+    needs: [build-and-test, push_to_registry, trigger_jenkins]
     if: ${{ failure() }}
     steps:
       - name: Checkout Code
@@ -269,7 +225,7 @@ jobs:
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} ล้มเหลว
           body: |
-            ข้อความ: งาน `build` ของ ${{ github.repository }} ล้มเหลว
+            ข้อความ: งาน `build-and-test` ของ ${{ github.repository }} ล้มเหลว
 
             รายละเอียดข้อผิดพลาดอยู่ในไฟล์แนบ
 
@@ -286,7 +242,7 @@ jobs:
   send_success_notification:
     name: Send Success Notification
     runs-on: ubuntu-latest
-    needs: [ lint, build, push_to_registry, zap_scan, trigger_jenkins]
+    needs: [build-and-test, push_to_registry, trigger_jenkins]
     if: ${{ success() }}
     steps:
       - name: Checkout Code
@@ -311,11 +267,10 @@ jobs:
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: งาน ${{ github.job }} ของ ${{ github.repository }} สำเร็จ
           body: |
-            ข้อความ: งาน `build` ของ ${{ github.repository }} สำเร็จ
+            ข้อความ: งาน `build-and-test` ของ ${{ github.repository }} สำเร็จ
 
             ไฟล์ที่มีการแก้ไข: ${{ env.changed_files }}
 
             ขอบคุณที่รอดำเนินการให้เสร็จสิ้น
           to: ${{ env.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
-
