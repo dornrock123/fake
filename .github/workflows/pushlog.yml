@@ -88,10 +88,10 @@ jobs:
           name: error-files
           path: build_errors.log
 
-  run-api:
-    name: Run API
-    runs-on: ubuntu-latest
-    steps:
+  # run-api:
+  #   name: Run API
+  #   runs-on: ubuntu-latest
+  #   steps:
 
   run-web-and-test:
     name: Run Web and Playwright Tests
@@ -433,7 +433,7 @@ jobs:
         dependabot,
         lint,
         build,
-        run-api,
+        # run-api,
         run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
@@ -510,7 +510,7 @@ jobs:
         dependabot,
         lint,
         build,
-        run-api,
+        # run-api,
         run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
