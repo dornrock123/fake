@@ -7,20 +7,11 @@ concurrency:
 on:
   push:
     branches:
-      - main
+      - feature/deployment-with-cicd
+      - release branch
   pull_request:
     branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      api_branch:
-        description: "API branch to checkout"
-        required: true
-        default: "main"
-      web_branch:
-        description: "Web branch to checkout"
-        required: true
-        default: "main"
+      - feature/deployment-with-cicd
 
 jobs:
   dependabot:
@@ -71,7 +62,7 @@ jobs:
           node-version: "16.20.2"
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install --force
 
       - name: Build Project
         id: build
@@ -88,50 +79,18 @@ jobs:
           name: error-files
           path: build_errors.log
 
-  # run-api:
-  #   name: Run API
-  #   runs-on: ubuntu-latest
-  #   steps:
-
   run-web-and-test:
     name: Run Web and Playwright Tests
     runs-on: ubuntu-latest
+    needs: build
     steps:
-      - name: Checkout API repository
-        uses: actions/checkout@v3
-        with:
-          repository: Theerapat-dev/PresidentDemo-API
-          ref: ${{ github.event.inputs.api_branch || 'main' }}
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v2
-        with:
-          distribution: "adopt"
-          java-version: "17"
-
-      - name: Build and Run Spring Boot API
-        run: |
-          mvn clean install
-          nohup mvn spring-boot:run > /dev/null 2>&1 &
-
-      - name: Install wait-on
-        run: npm install -g wait-on
-
-      - name: Wait for API to be ready
-        run: wait-on http://localhost:9003/api/President
-
-      - name: Checkout Web repository
-        uses: actions/checkout@v3
-        with:
-          repository: Theerapat-dev/PresidentDemo-Web
-          token: ${{ secrets.GH_PAT }}
-          ref: ${{ github.event.inputs.web_branch || 'main' }}
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v2
         with:
-          node-version: "16.20.2"
+          node-version: "16"
 
       - name: Set npm registry
         run: npm config set registry https://registry.npmjs.org/
@@ -141,22 +100,16 @@ jobs:
 
       - name: Start the app
         run: |
-          npm start &
-          wait-on http://localhost:4200
+            npm start &
+            npx wait-on http://localhost:4200
+        env:
+          PORT: 4200
 
       - name: Install Playwright
         run: npx playwright install
 
       - name: Run Playwright tests
-        id: run-tests
-        run: |
-          npx playwright test president/E2E-Script --output=results.json || exit 1
-          if jq -e '.[] | select(.status == "failed")' results.json > /dev/null; then
-            echo "Tests failed."
-            exit 1
-          else
-            echo "Tests passed."
-          fi
+        run: npx playwright test
 
       - name: Create screenshots directory
         if: always()
@@ -184,7 +137,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker_name: "ghcr.io/zaproxy/zaproxy:stable"
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"
+          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"  #ลิ้งของ pea แบบ public
           cmd_options: "-a"
 
       - name: Upload ZAP Scan Report
@@ -212,7 +165,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker_name: "ghcr.io/zaproxy/zaproxy:stable"
           format: openapi
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"
+          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/" #ลิ้งของ pea แบบ public
           cmd_options: "-a"
 
       - name: Upload ZAP Scan Report
@@ -224,207 +177,6 @@ jobs:
             report_md.md
             report_html.html
 
-  push_to_registry:
-    name: Push Docker image to Docker Hub
-    runs-on: ubuntu-latest
-    needs: [ZAP_Full_Scan_Before, ZAP_API_Scan_Before]
-    # needs: build
-    # needs: run-api
-    concurrency:
-      group: push-to-registry-${{ github.ref }}
-      cancel-in-progress: false
-
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: lefisius/dockerbuild
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  create_log_branch:
-    name: Create Log Branch
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, build, push_to_registry]
-    concurrency:
-      group: create-log-branch-${{ github.ref }}
-      cancel-in-progress: false
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Fetch all history for all branches and tags
-
-      - name: Create New Branch with Commit Message
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          # Get the author information from the latest commit
-          COMMIT_AUTHOR_NAME=$(git log -1 --pretty=%an)
-          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae)
-
-          # Set the git config to use the author's info
-          git config user.name "$COMMIT_AUTHOR_NAME"
-          git config user.email "$COMMIT_AUTHOR_EMAIL"
-
-          FULL_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-
-          if [[ $FULL_COMMIT_MESSAGE == Merge\ pull\ request* ]]; then
-            PR_NUM=$(echo "$FULL_COMMIT_MESSAGE" | grep -oP '#\K\d+')
-            PR_TITLE=$(git log -1 --pretty=%B | sed -n '5p' | cut -c1-50)
-            COMMIT_MESSAGE="pr-${PR_NUM}-${PR_TITLE}"
-          else
-            COMMIT_MESSAGE=$(echo "$FULL_COMMIT_MESSAGE" | head -n 1)
-          fi
-
-          SANITIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-50)
-
-          NEW_BRANCH_NAME="log-${SANITIZED_MESSAGE}"
-
-          git checkout -b $NEW_BRANCH_NAME
-          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git $NEW_BRANCH_NAME
-
-  ZAP_Full_Scan:
-    runs-on: ubuntu-latest
-    needs: push_to_registry
-    name: ZAP Full Scan Webapplication
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: master
-
-      - name: ZAP Scan
-        uses: zaproxy/action-full-scan@v0.11.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          docker_name: "ghcr.io/zaproxy/zaproxy:stable"
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"
-          cmd_options: "-a"
-
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ZAP_Full_Scan_After
-          path: |
-            report_json.json
-            report_md.md
-            report_html.html
-
-  ZAP_API_Scan:
-    runs-on: ubuntu-latest
-    needs: push_to_registry
-    name: ZAP_API_Scan
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: master
-
-      - name: ZAP Scan
-        uses: zaproxy/action-api-scan@v0.8.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          docker_name: "ghcr.io/zaproxy/zaproxy:stable"
-          format: openapi
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"
-          cmd_options: "-a"
-
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ZAP_API_Scan_After
-          path: |
-            report_json.json
-            report_md.md
-            report_html.html
-
-  trigger_jenkins:
-    name: Trigger Jenkins Job
-    runs-on: ubuntu-latest
-    needs: [ZAP_Full_Scan, ZAP_API_Scan]
-    if: github.ref == 'refs/heads/main'
-    concurrency:
-      group: trigger-jenkins-job-${{ github.ref }}
-      cancel-in-progress: false
-
-    steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Trigger Jenkins Job
-        id: trigger_jenkins
-        run: |
-          response=$(curl -X POST "https://89f76092c05fc32fec6c4eeb4015446d.serveo.net/job/testpipe/build" \
-          --user "user:11b20d5f21817203f0fb4db12e13b2402e")
-          echo "Triggered Jenkins Job"
-
-      - name: Wait for Jenkins Job to Complete
-        run: |
-          job_status="null"
-          max_attempts=20
-          attempt=0
-          while [ "$job_status" != "SUCCESS" ] && [ $attempt -lt $max_attempts ]; do
-            sleep 15
-            attempt=$((attempt+1))
-            response=$(curl -s -w "%{http_code}" "https://89f76092c05fc32fec6c4eeb4015446d.serveo.net/job/testpipe/lastBuild/api/json" \
-              --user "user:11b20d5f21817203f0fb4db12e13b2402e")
-            http_code=${response: -3}
-            body=${response:0:${#response}-3}
-
-            echo "HTTP Response Code: $http_code"
-
-            if [ "$http_code" -ne 200 ]; then
-              echo "Error fetching Jenkins job status. HTTP Response Code: $http_code"
-              echo "Response body: $body"
-              if [ $attempt -eq $max_attempts ]; then
-                echo "Max attempts reached. Exiting."
-                exit 1
-              fi
-              continue
-            fi
-
-            if ! job_status=$(echo "$body" | jq -r '.result'); then
-              echo "Error parsing JSON response. Raw response:"
-              echo "$body"
-              if [ $attempt -eq $max_attempts ]; then
-                echo "Max attempts reached. Exiting."
-                exit 1
-              fi
-              continue
-            fi
-
-            echo "Current Job Status: $job_status"
-
-            if [ "$job_status" = "FAILURE" ]; then
-              echo "Jenkins job failed. Exiting."
-              exit 1
-            fi
-          done
-
-          if [ $attempt -eq $max_attempts ]; then
-            echo "Max attempts reached. Job did not complete successfully."
-            exit 1
-          fi
-
   send_failure_notification:
     name: Send Failure Notification
     runs-on: ubuntu-latest
@@ -433,14 +185,10 @@ jobs:
         dependabot,
         lint,
         build,
-        # run-api,
         run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
-        push_to_registry,
-        ZAP_Full_Scan,
-        ZAP_API_Scan,
-        trigger_jenkins,
+
       ]
     if: ${{ failure() }}
     concurrency:
@@ -510,14 +258,9 @@ jobs:
         dependabot,
         lint,
         build,
-        # run-api,
         run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
-        push_to_registry,
-        ZAP_Full_Scan,
-        ZAP_API_Scan,
-        trigger_jenkins,
       ]
     if: ${{ success() }}
     concurrency:
