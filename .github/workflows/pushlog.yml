@@ -232,8 +232,13 @@ jobs:
       - name: Get failed jobs
         id: get_failed_jobs
         run: |
-          failed_jobs=$(echo "${{ toJson(github.event.workflow_run.conclusion) }}" | jq -r '.[] | select(.conclusion == "failure") | .name')
-          echo "failed_jobs=$failed_jobs" >> $GITHUB_OUTPUT
+            failed_jobs=""
+            for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
+              if [[ "${{ needs[job].result }}" == "failure" ]]; then
+                failed_jobs+="$job "
+              fi
+            done
+            echo "failed_jobs=$failed_jobs" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
