@@ -79,48 +79,48 @@ jobs:
           name: error-files
           path: build_errors.log
 
-  # run-web-and-test:
-  #   name: Run Web and Playwright Tests
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
+  run-web-and-test:
+    name: Run Web and Playwright Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v2
-  #       with:
-  #         node-version: "16"
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "16"
 
-  #     - name: Set npm registry
-  #       run: npm config set registry https://registry.npmjs.org/
+      - name: Set npm registry
+        run: npm config set registry https://registry.npmjs.org/
 
-  #     - name: Install dependencies
-  #       run: npm install --force
+      - name: Install dependencies
+        run: npm install --force
 
-  #     - name: Start the app
-  #       run: |
-  #           npm start &
-  #           npx wait-on http://localhost:4200
-  #       env:
-  #         PORT: 4200
+      - name: Start the app
+        run: |
+            npm start &
+            npx wait-on http://localhost:4200
+        env:
+          PORT: 4200
 
-  #     - name: Install Playwright
-  #       run: npx playwright install
+      - name: Install Playwright
+        run: npx playwright install
 
-  #     - name: Run Playwright tests
-  #       run: npx playwright test
+      - name: Run Playwright tests
+        run: npx playwright test
 
-  #     - name: Create screenshots directory
-  #       if: always()
-  #       run: mkdir -p screenshots
+      - name: Create screenshots directory
+        if: always()
+        run: mkdir -p screenshots
 
-  #     - name: Upload Screenshots
-  #       if: always()
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: playwright-screenshots
-  #         path: screenshots/failure.png
+      - name: Upload Screenshots
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-screenshots
+          path: screenshots/failure.png
 
   ZAP_Full_Scan_Before:
     runs-on: ubuntu-latest
@@ -185,7 +185,7 @@ jobs:
         dependabot,
         lint,
         build,
-        # run-web-and-test,
+        run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
       ]
@@ -232,13 +232,13 @@ jobs:
       - name: Get failed jobs
         id: get_failed_jobs
         run: |
-            failed_jobs=""
-            for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
-              if [[ "${{ needs[job].result }}" == "failure" ]]; then
-                failed_jobs+="$job "
-              fi
-            done
-            echo "failed_jobs=$failed_jobs" >> $GITHUB_OUTPUT
+          failed_jobs=""
+          for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
+            if [[ "${{ needs[job].result }}" == "failure" ]]; then
+              failed_jobs+="$job "
+            fi
+          done
+          echo "failed_jobs=${failed_jobs}" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
@@ -268,7 +268,7 @@ jobs:
           curl -H 'Content-Type: application/json' \
               -d '{
                     "title": "❌ Deploy Fail",
-                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: '${{ steps.get_failed_jobs.outputs.failed_jobs }}'
+                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
 
   send_success_notification:
@@ -279,7 +279,7 @@ jobs:
         dependabot,
         lint,
         build,
-        # run-web-and-test,
+        run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
       ]
