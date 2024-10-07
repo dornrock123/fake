@@ -254,7 +254,7 @@ jobs:
         run: |
           curl -H 'Content-Type: application/json' \
                -d '{
-                    "title": "❌ Build Failed",
+                    "title": "❌ Build Fail",
                     "text": "The build has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions""
                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
 
