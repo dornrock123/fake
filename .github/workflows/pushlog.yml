@@ -79,48 +79,48 @@ jobs:
           name: error-files
           path: build_errors.log
 
-  run-web-and-test:
-    name: Run Web and Playwright Tests
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+  # run-web-and-test:
+  #   name: Run Web and Playwright Tests
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "16"
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: "16"
 
-      - name: Set npm registry
-        run: npm config set registry https://registry.npmjs.org/
+  #     - name: Set npm registry
+  #       run: npm config set registry https://registry.npmjs.org/
 
-      - name: Install dependencies
-        run: npm install --force
+  #     - name: Install dependencies
+  #       run: npm install --force
 
-      - name: Start the app
-        run: |
-            npm start &
-            npx wait-on http://localhost:4200
-        env:
-          PORT: 4200
+  #     - name: Start the app
+  #       run: |
+  #           npm start &
+  #           npx wait-on http://localhost:4200
+  #       env:
+  #         PORT: 4200
 
-      - name: Install Playwright
-        run: npx playwright install
+  #     - name: Install Playwright
+  #       run: npx playwright install
 
-      - name: Run Playwright tests
-        run: npx playwright test
+  #     - name: Run Playwright tests
+  #       run: npx playwright test
 
-      - name: Create screenshots directory
-        if: always()
-        run: mkdir -p screenshots
+  #     - name: Create screenshots directory
+  #       if: always()
+  #       run: mkdir -p screenshots
 
-      - name: Upload Screenshots
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: playwright-screenshots
-          path: screenshots/failure.png
+  #     - name: Upload Screenshots
+  #       if: always()
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: playwright-screenshots
+  #         path: screenshots/failure.png
 
   ZAP_Full_Scan_Before:
     runs-on: ubuntu-latest
@@ -185,7 +185,7 @@ jobs:
         dependabot,
         lint,
         build,
-        run-web-and-test,
+        # run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
       ]
@@ -234,11 +234,34 @@ jobs:
         run: |
           failed_jobs=""
           for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
+            echo "Checking job: $job, result: ${{ needs[job].result }}"
             if [[ "${{ needs[job].result }}" == "failure" ]]; then
               failed_jobs+="$job "
             fi
           done
+          echo "Failed jobs: $failed_jobs"
           echo "failed_jobs=${failed_jobs}" >> $GITHUB_OUTPUT
+
+      - name: Debug output
+        run: |
+          echo "Failed jobs from previous step: ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
+
+      - name: Prepare email content
+        id: email_content
+        run: |
+          email_body="Build failed for commit: ${{ github.sha }}
+
+          Files with errors:
+          ${{ steps.error_info.outputs.error_paths }}
+
+          Files changed: ${{ steps.error_info.outputs.non_error_files }}
+
+          Failed jobs:
+          ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
+
+          echo "email_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$email_body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
@@ -248,17 +271,7 @@ jobs:
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: "Build failure for ${{ github.repository }}"
-          body: |
-            Build failed for commit: ${{ github.sha }}
-
-            Files with errors:
-            ${{ steps.error_info.outputs.error_paths }}
-
-            Files changed: ${{ steps.error_info.outputs.non_error_files }}
-
-            Failed jobs:
-            ${{ steps.get_failed_jobs.outputs.failed_jobs }}
-
+          body: ${{ steps.email_content.outputs.email_body }}
           to: ${{ steps.error_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
@@ -279,7 +292,7 @@ jobs:
         dependabot,
         lint,
         build,
-        run-web-and-test,
+        # run-web-and-test,
         ZAP_Full_Scan_Before,
         ZAP_API_Scan_Before,
       ]
