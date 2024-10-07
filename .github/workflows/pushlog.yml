@@ -315,5 +315,5 @@ jobs:
           curl -H 'Content-Type: application/json' \
                -d '{
                     "title": "✅ Build Success",
-                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
+                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/dornrock123/fake/actions"
                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
