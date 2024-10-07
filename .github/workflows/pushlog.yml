@@ -250,6 +250,15 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
 
+      - name: Send failure notification to Microsoft Teams
+        if: failure()  # ส่งแจ้งเตือนเมื่อ build ล้มเหลว
+        run: |
+          curl -H 'Content-Type: application/json' \
+               -d '{
+                    "title": "❌ Build Failed",
+                    "text": "The build has failed on branch main. Please check!"
+                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+
   send_success_notification:
     name: Send Success Notification
     runs-on: ubuntu-latest
@@ -301,3 +310,12 @@ jobs:
 
           to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Send success notification to Microsoft Teams
+        if: success()  # ส่งแจ้งเตือนเมื่อ build สำเร็จ
+        run: |
+          curl -H 'Content-Type: application/json' \
+               -d '{
+                    "title": "✅ Build Success",
+                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
+                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
