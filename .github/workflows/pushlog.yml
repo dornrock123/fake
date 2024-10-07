@@ -232,57 +232,66 @@ jobs:
       - name: Get failed jobs
         id: get_failed_jobs
         run: |
-          failed_jobs=""
-          for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
-            echo "Checking job: $job, result: ${{ needs[job].result }}"
-            if [[ "${{ needs[job].result }}" == "failure" ]]; then
-              failed_jobs+="$job "
-            fi
-          done
-          echo "Failed jobs: $failed_jobs"
-          echo "failed_jobs=${failed_jobs}" >> $GITHUB_OUTPUT
+            echo "Starting to check for failed jobs..."
+            failed_jobs=""
+            for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
+              echo "Checking job: $job, result: ${{ needs[job].result }}"
+              if [[ "${{ needs[job].result }}" == "failure" ]]; then
+                echo "Job $job has failed"
+                failed_jobs+="$job "
+              fi
+            done
+            echo "All failed jobs: $failed_jobs"
+            echo "failed_jobs=${failed_jobs}" >> $GITHUB_OUTPUT
+            echo "FAILED_JOBS=${failed_jobs}" >> $GITHUB_ENV
 
       - name: Debug output
         run: |
-          echo "Failed jobs from previous step: ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
+            echo "Failed jobs from previous step (output): ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
+            echo "Failed jobs from previous step (env): ${{ env.FAILED_JOBS }}"
 
       - name: Prepare email content
         id: email_content
         run: |
-          email_body="Build failed for commit: ${{ github.sha }}
+            email_body="Build failed for commit: ${{ github.sha }}
 
-          Files with errors:
-          ${{ steps.error_info.outputs.error_paths }}
+            Files with errors:
+            ${{ steps.error_info.outputs.error_paths }}
 
-          Files changed: ${{ steps.error_info.outputs.non_error_files }}
+            Files changed: ${{ steps.error_info.outputs.non_error_files }}
 
-          Failed jobs:
-          ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
+            Failed jobs:
+            ${{ env.FAILED_JOBS }}"
 
-          echo "email_body<<EOF" >> $GITHUB_OUTPUT
-          echo "$email_body" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            echo "email_body<<EOF" >> $GITHUB_OUTPUT
+            echo "$email_body" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            echo "Full email content:"
+            echo "$email_body"
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Build failure for ${{ github.repository }}"
-          body: ${{ steps.email_content.outputs.email_body }}
-          to: ${{ steps.error_info.outputs.commit_author_email }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-          attachments: build_errors.log
+            server_address: smtp.gmail.com
+            server_port: 587
+            username: ${{ secrets.GMAIL_USERNAME }}
+            password: ${{ secrets.GMAIL_APP_PASSWORD }}
+            subject: "Build failure for ${{ github.repository }}"
+            body: ${{ steps.email_content.outputs.email_body }}
+            to: ${{ steps.error_info.outputs.commit_author_email }}
+            from: ${{ secrets.GMAIL_USERNAME }}
+            attachments: build_errors.log
 
       - name: Send failure notification to Microsoft Teams
         run: |
-          curl -H 'Content-Type: application/json' \
-              -d '{
-                    "title": "❌ Deploy Fail",
-                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
-                  }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+            message="The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: ${{ env.FAILED_JOBS }}"
+            curl -H 'Content-Type: application/json' \
+                -d '{
+                      "title": "❌ Deploy Fail",
+                      "text": "'"${message}"'"
+                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+            echo "Message sent to Teams: ${message}"
 
   send_success_notification:
     name: Send Success Notification
