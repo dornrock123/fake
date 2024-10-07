@@ -254,8 +254,8 @@ jobs:
         run: |
           curl -H 'Content-Type: application/json' \
                -d '{
-                    "title": "❌ deploy Fail",
-                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions"
+                    "title": "❌ Build Failed",
+                    "text": "The build has failed on branch main. Please check!"
                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
 
   send_success_notification:
@@ -314,6 +314,6 @@ jobs:
         run: |
           curl -H 'Content-Type: application/json' \
                -d '{
-                    "title": "✅ deploy Success",
-                    "text": "The deploy has succeeded on branch main. Check the details here: https://github.com/dornrock123/fake/actions"
+                    "title": "✅ Build Success",
+                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
