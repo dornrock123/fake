@@ -188,7 +188,6 @@ jobs:
         # run-web-and-test,
         # ZAP_Full_Scan_Before,
         # ZAP_API_Scan_Before,
-
       ]
     if: ${{ failure() }}
     concurrency:
@@ -230,6 +229,12 @@ jobs:
           echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
 
+      - name: Get failed jobs
+        id: get_failed_jobs
+        run: |
+          failed_jobs=$(echo "${{ toJson(github.event.workflow_run.conclusion) }}" | jq -r '.[] | select(.conclusion == "failure") | .name')
+          echo "failed_jobs=$failed_jobs" >> $GITHUB_OUTPUT
+
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
@@ -246,6 +251,9 @@ jobs:
 
             Files changed: ${{ steps.error_info.outputs.non_error_files }}
 
+            Failed jobs:
+            ${{ steps.get_failed_jobs.outputs.failed_jobs }}
+
           to: ${{ steps.error_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
           attachments: build_errors.log
@@ -253,10 +261,11 @@ jobs:
       - name: Send failure notification to Microsoft Teams
         run: |
           curl -H 'Content-Type: application/json' \
-               -d '{
-                    "title": "❌ deploy Fail",
-                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions"
-                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+              -d '{
+                    "title": "❌ Deploy Fail",
+                    "text": "The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: '${{ steps.get_failed_jobs.outputs.failed_jobs }}'
+                  }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+
 
   send_success_notification:
     name: Send Success Notification
