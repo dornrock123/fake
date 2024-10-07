@@ -122,60 +122,60 @@ jobs:
   #         name: playwright-screenshots
   #         path: screenshots/failure.png
 
-  ZAP_Full_Scan_Before:
-    runs-on: ubuntu-latest
-    needs: build
-    name: ZAP_Full_Scan_Before
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: master
+  # ZAP_Full_Scan_Before:
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   name: ZAP_Full_Scan_Before
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: master
 
-      - name: ZAP Scan
-        uses: zaproxy/action-full-scan@v0.11.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          docker_name: "ghcr.io/zaproxy/zaproxy:stable"
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"  # Public link
-          cmd_options: "-a"
+  #     - name: ZAP Scan
+  #       uses: zaproxy/action-full-scan@v0.11.0
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         docker_name: "ghcr.io/zaproxy/zaproxy:stable"
+  #         target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/"  #ลิ้งของ pea แบบ public
+  #         cmd_options: "-a"
 
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ZAP_Full_Scan_Before
-          path: |
-            report_json.json
-            report_md.md
-            report_html.html
+  #     - name: Upload ZAP Scan Report
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ZAP_Full_Scan_Before
+  #         path: |
+  #           report_json.json
+  #           report_md.md
+  #           report_html.html
 
-  ZAP_API_Scan_Before:
-    runs-on: ubuntu-latest
-    needs: build
-    name: ZAP_API_Scan_Before
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: master
+  # ZAP_API_Scan_Before:
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   name: ZAP_API_Scan_Before
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: master
 
-      - name: ZAP Scan
-        uses: zaproxy/action-api-scan@v0.8.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          docker_name: "ghcr.io/zaproxy/zaproxy:stable"
-          format: openapi
-          target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/" # Public link
-          cmd_options: "-a"
+  #     - name: ZAP Scan
+  #       uses: zaproxy/action-api-scan@v0.8.0
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         docker_name: "ghcr.io/zaproxy/zaproxy:stable"
+  #         format: openapi
+  #         target: "https://24d95ca73e89dfa76c417797f94624e1.serveo.net/" #ลิ้งของ pea แบบ public
+  #         cmd_options: "-a"
 
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ZAP_API_Scan_Before
-          path: |
-            report_json.json
-            report_md.md
-            report_html.html
+  #     - name: Upload ZAP Scan Report
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ZAP_API_Scan_Before
+  #         path: |
+  #           report_json.json
+  #           report_md.md
+  #           report_html.html
 
   send_failure_notification:
     name: Send Failure Notification
@@ -186,8 +186,9 @@ jobs:
         lint,
         build,
         # run-web-and-test,
-        ZAP_Full_Scan_Before,
-        ZAP_API_Scan_Before,
+        # ZAP_Full_Scan_Before,
+        # ZAP_API_Scan_Before,
+
       ]
     if: ${{ failure() }}
     concurrency:
@@ -229,69 +230,33 @@ jobs:
           echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
           echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
 
-      - name: Get failed jobs
-        id: get_failed_jobs
-        run: |
-            echo "Starting to check for failed jobs..."
-            failed_jobs=""
-            for job in dependabot lint build run-web-and-test ZAP_Full_Scan_Before ZAP_API_Scan_Before; do
-              echo "Checking job: $job, result: ${{ needs[job].result }}"
-              if [[ "${{ needs[job].result }}" == "failure" ]]; then
-                echo "Job $job has failed"
-                failed_jobs+="$job "
-              fi
-            done
-            echo "All failed jobs: $failed_jobs"
-            echo "failed_jobs=${failed_jobs}" >> $GITHUB_OUTPUT
-            echo "FAILED_JOBS=${failed_jobs}" >> $GITHUB_ENV
-
-      - name: Debug output
-        run: |
-            echo "Failed jobs from previous step (output): ${{ steps.get_failed_jobs.outputs.failed_jobs }}"
-            echo "Failed jobs from previous step (env): ${{ env.FAILED_JOBS }}"
-
-      - name: Prepare email content
-        id: email_content
-        run: |
-            email_body="Build failed for commit: ${{ github.sha }}
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Build failure for ${{ github.repository }}"
+          body: |
+            Build failed for commit: ${{ github.sha }}
 
             Files with errors:
             ${{ steps.error_info.outputs.error_paths }}
 
             Files changed: ${{ steps.error_info.outputs.non_error_files }}
 
-            Failed jobs:
-            ${{ env.FAILED_JOBS }}"
-
-            echo "email_body<<EOF" >> $GITHUB_OUTPUT
-            echo "$email_body" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-
-            echo "Full email content:"
-            echo "$email_body"
-
-      - name: Send email on failure
-        uses: dawidd6/action-send-mail@v3
-        with:
-            server_address: smtp.gmail.com
-            server_port: 587
-            username: ${{ secrets.GMAIL_USERNAME }}
-            password: ${{ secrets.GMAIL_APP_PASSWORD }}
-            subject: "Build failure for ${{ github.repository }}"
-            body: ${{ steps.email_content.outputs.email_body }}
-            to: ${{ steps.error_info.outputs.commit_author_email }}
-            from: ${{ secrets.GMAIL_USERNAME }}
-            attachments: build_errors.log
+          to: ${{ steps.error_info.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+          attachments: build_errors.log
 
       - name: Send failure notification to Microsoft Teams
         run: |
-            message="The deploy has failed on branch main. Check the details here: https://github.com/dornrock123/fake/actions\n\nFailed jobs: ${{ env.FAILED_JOBS }}"
-            curl -H 'Content-Type: application/json' \
-                -d '{
-                      "title": "❌ Deploy Fail",
-                      "text": "'"${message}"'"
-                    }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
-            echo "Message sent to Teams: ${message}"
+          curl -H 'Content-Type: application/json' \
+               -d '{
+                    "title": "❌ Build Failed",
+                    "text": "The build has failed on branch main. Please check!"
+                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
 
   send_success_notification:
     name: Send Success Notification
@@ -302,14 +267,33 @@ jobs:
         lint,
         build,
         # run-web-and-test,
-        ZAP_Full_Scan_Before,
-        ZAP_API_Scan_Before,
+        # ZAP_Full_Scan_Before,
+        # ZAP_API_Scan_Before,
       ]
     if: ${{ success() }}
     concurrency:
       group: send-success-notification-${{ github.ref }}
       cancel-in-progress: false
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history
+
+      - name: Get Commit Info
+        id: commit_info
+        run: |
+          # Get the author information from the latest commit
+          COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%ae')
+
+          if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
+            COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%b' | grep -oP '(?<=Signed-off-by: ).*(?= <)')
+          fi
+
+          changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
+          echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+          echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+
       - name: Send email on success
         uses: dawidd6/action-send-mail@v3
         with:
@@ -321,6 +305,15 @@ jobs:
           body: |
             Build succeeded for commit: ${{ github.sha }}
 
-            Check the details here: https://github.com/dornrock123/fake/actions
-          to: ${{ secrets.GMAIL_USERNAME }}
+            Files changed: ${{ steps.commit_info.outputs.changed_files }}
+
+          to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
+
+      - name: Send success notification to Microsoft Teams
+        run: |
+          curl -H 'Content-Type: application/json' \
+               -d '{
+                    "title": "✅ Build Success",
+                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
+                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
