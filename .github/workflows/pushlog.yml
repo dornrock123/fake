@@ -311,9 +311,11 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
 
       - name: Send success notification to Microsoft Teams
-        run: |
-          curl -H 'Content-Type: application/json' \
-               -d '{
-                    "title": "✅ Build Success",
-                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
-                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+        uses: ilovetocode/microsoft-teams-action@v1
+        with:
+            webhook-url: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+            message: |
+              {
+                "title": "✅ Build Success",
+                "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
+              }
