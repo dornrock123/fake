@@ -310,13 +310,10 @@ jobs:
           to: ${{ steps.commit_info.outputs.commit_author_email }}
           from: ${{ secrets.GMAIL_USERNAME }}
 
-      - name: Notify Microsoft Teams
-        uses: Atos-Systems/teams-notify-action@v2
-        with:
-            webhook_uri: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
-            message: |
-              {
-                "title": "✅ Build Success",
-                "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
-              }
-
+      - name: Send success notification to Microsoft Teams
+        run: |
+          curl -H 'Content-Type: application/json' \
+               -d '{
+                    "title": "✅ Build Success",
+                    "text": "The build has succeeded on branch main. Check the details here: https://github.com/your-repo/actions"
+                   }' ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
