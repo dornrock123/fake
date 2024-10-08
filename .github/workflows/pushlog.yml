@@ -311,7 +311,7 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
 
       - name: Send success notification to Microsoft Teams
-        uses: ilovetocode/microsoft-teams-action@v1
+        uses: atlassian/gajira-notify@v3.3.0
         with:
             webhook-url: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
             message: |
