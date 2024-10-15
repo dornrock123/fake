@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Super-Linter
-        uses: github/super-linter@v
+        uses: github/super-linter@v4
         env:
           VALIDATE_ALL_CODEBASE: false
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
@@ -205,59 +205,50 @@ jobs:
         with:
           name: error-files
 
-      - name: Get Failed Job Information
-        id: job_info
-        run: |
-            # Find the job that failed and store its name
-            failed_job=$(jq -r '.jobs[] | select(.conclusion == "failure") | .name' < $GITHUB_WORKFLOW_JOB_CONTEXT)
-            echo "failed_job=$failed_job" >> $GITHUB_ENV
-
       - name: Get Error Log and Commit Info
         id: error_info
         run: |
-            # Get the author information from the latest commit
-            COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae)
+          # Get the author information from the latest commit
+          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae)
 
-            if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
-              COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%b | grep -oP '(?<=Signed-off-by: ).*(?= <)')
+          if [[ "$COMMIT_AUTHOR_EMAIL" == *"@users.noreply.github.com" ]]; then
+            COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=%b | grep -oP '(?<=Signed-off-by: ).*(?= <)')
+          fi
+
+          changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
+
+          error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
+          echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
+
+          non_error_files=""
+          for file in $changed_files; do
+            if ! grep -q "$file" build_errors.log; then
+              non_error_files+="$file "
             fi
+          done
 
-            changed_files=$(git diff --name-only HEAD~1 HEAD | tr '\n' ' ')
-
-            error_paths=$(grep -o '/.*error' build_errors.log | sed 's/:.*//' | sort -u | tr '\n' ' ' | sed 's/ $//')
-            echo "error_paths=$error_paths" >> $GITHUB_OUTPUT
-
-            non_error_files=""
-            for file in $changed_files; do
-              if ! grep -q "$file" build_errors.log; then
-                non_error_files+="$file "
-              fi
-            done
-
-            echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
-            echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+          echo "non_error_files=$non_error_files" >> $GITHUB_OUTPUT
+          echo "commit_author_email=$COMMIT_AUTHOR_EMAIL" >> $GITHUB_OUTPUT
 
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         with:
-            server_address: smtp.gmail.com
-            server_port: 587
-            username: ${{ secrets.GMAIL_USERNAME }}
-            password: ${{ secrets.GMAIL_APP_PASSWORD }}
-            subject: "Build failure for ${{ github.repository }}"
-            body: |
-              Build failed for commit: ${{ github.sha }}
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Build failure for ${{ github.repository }}"
+          body: |
+            Build failed for commit: ${{ github.sha }}
 
-              Job that failed: ${{ env.failed_job }}
+            Files with errors:
+            ${{ steps.error_info.outputs.error_paths }}
 
-              Files with errors:
-              ${{ steps.error_info.outputs.error_paths }}
+            Files changed: ${{ steps.error_info.outputs.non_error_files }}
 
-              Files changed: ${{ steps.error_info.outputs.non_error_files }}
-
-            to: ${{ steps.error_info.outputs.commit_author_email }}
-            from: ${{ secrets.GMAIL_USERNAME }}
-            attachments: build_errors.log
+          to: ${{ steps.error_info.outputs.commit_author_email }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+          attachments: build_errors.log
 
       - name: Send failure notification to Microsoft Teams
         run: |
